@@ -115,6 +115,28 @@ TRADE_PAIRS: list[tuple[str, str, float]] = [
 # --------------------------------------------------------------------------- #
 # 人物
 # --------------------------------------------------------------------------- #
+#: 品级与官职性质。品级 1 最高（三公），9 最低；闲职有官位而无实权。
+#: 这些是**建模估值**，按唐代官制的大致序列给定，不作精确复原。
+OFFICE_META: dict[str, tuple[int, str]] = {
+    "li_longji": (1, "civil"),
+    "li_heng": (1, "civil"),
+    "li_chu": (2, "civil"),
+    "yang_guozhong": (2, "civil"),
+    "gao_xianzhi": (3, "military"),
+    "feng_changqing": (3, "military"),
+    "geshu_han": (2, "military"),
+    "guo_ziyi": (3, "military"),
+    "li_guangbi": (3, "military"),
+    "zhang_xun": (6, "civil"),
+    "li_bi": (5, "civil"),
+    "yu_chaoen": (4, "envoy"),
+    "pugu_huai_en": (3, "military"),
+    "an_lushan": (2, "military"),
+    "shi_siming": (3, "military"),
+    "an_qingxu": (3, "military"),
+    "shi_chaoyi": (3, "military"),
+}
+
 #: role: emperor / minister / general / eunuch / rebel
 CHARACTERS: list[dict[str, Any]] = [
     {
@@ -873,7 +895,10 @@ def seed(session: Session) -> World:
             )
 
     for item in CHARACTERS:
-        session.add(Character(world_id=world.id, **item))
+        rank, kind = OFFICE_META.get(item["key"], (5, "civil"))
+        session.add(
+            Character(world_id=world.id, office_rank=rank, office_kind=kind, **item)
+        )
 
     for item in ARMIES:
         session.add(Army(world_id=world.id, **item))

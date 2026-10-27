@@ -1,4 +1,4 @@
-﻿"""领域模型。
+"""领域模型。
 
 设计要点（对应设计文档）：
 - ``World`` 是「世界模板」：地区、势力、初始数据、规则参数。
@@ -174,6 +174,9 @@ class Character(Base):
     #: emperor / minister / general / eunuch / rebel
     role: Mapped[str] = mapped_column(String(24), default="general")
     office: Mapped[str] = mapped_column(String(96), default="")
+    #: 品级与性质：见 CharacterState 同名字段
+    office_rank: Mapped[int] = mapped_column(Integer, default=5)
+    office_kind: Mapped[str] = mapped_column(String(16), default="civil")
 
     born: Mapped[int | None] = mapped_column(Integer, nullable=True)
     died: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -274,6 +277,10 @@ class CharacterState(Base):
     faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     role: Mapped[str] = mapped_column(String(24), default="general")
     office: Mapped[str] = mapped_column(String(96), default="")
+    #: 品级：1 最高（三公），9 最低。用于判断迁转与威望。
+    office_rank: Mapped[int] = mapped_column(Integer, default=5)
+    #: 官职性质：military（统兵）/ civil（文职）/ envoy（使职）/ sinecure（闲职）
+    office_kind: Mapped[str] = mapped_column(String(16), default="civil")
     loyalty: Mapped[float] = mapped_column(Float, default=0.5)
     ambition: Mapped[float] = mapped_column(Float, default=0.2)
     ability: Mapped[float] = mapped_column(Float, default=0.5)

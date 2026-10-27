@@ -1,4 +1,4 @@
-"""世界与分支的服务层：创建、派生、查询。
+﻿"""世界与分支的服务层：创建、派生、查询。
 
 放在引擎之外，避免引擎直接依赖 HTTP 或命令行。
 """
@@ -119,6 +119,8 @@ def create_branch(
                 faction_key=person.faction_key,
                 role=person.role,
                 office=person.office,
+                office_rank=person.office_rank,
+                office_kind=person.office_kind,
                 loyalty=person.loyalty,
                 ambition=person.ambition,
                 ability=person.ability,

@@ -1,4 +1,4 @@
-// 无浏览器环境下的渲染冒烟测试。
+﻿// 无浏览器环境下的渲染冒烟测试。
 //
 // 思路：把 Vue 应用打成 IIFE 包（jsdom 不支持 ES module），
 // 在 jsdom 里加载并挂载，注入一个走真实后端接口的 fetch，
@@ -106,6 +106,37 @@ async function openPanel(name) {
   btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await wait(300);
   return window.document.querySelector(".side-panel").innerHTML;
+}
+
+// ---- 朝议：进言的人、主张、依据 ----
+// 先推进时间，确保世界真的抛出一道决策（否则朝议无从谈起）
+async function clickButton(text) {
+  const btn = [...window.document.querySelectorAll("button")].find(
+    (b) => b.textContent.trim() === text
+  );
+  if (!btn) return false;
+  btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  return true;
+}
+
+console.log("\n【朝议】");
+for (let i = 0; i < 4; i += 1) {
+  await clickButton("推进 12 月");
+  await wait(1200);
+  const cards = window.document.querySelectorAll(".decision-card");
+  if (cards.length) break;
+}
+const decideHtml = await openPanel("决断");
+const adviceChecks = {
+  "决断分组能打开": decideHtml !== null,
+  "出现朝议": /朝议/.test(decideHtml || ""),
+  "有进言者": /李光弼|郭子仪|李泌|哥舒翰|杨国忠/.test(decideHtml || ""),
+  "有主张": /主[^<]{2,}/.test(decideHtml || ""),
+  "有依据": /才略/.test(decideHtml || ""),
+};
+for (const [n, ok] of Object.entries(adviceChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
 }
 
 console.log("\n【军事分组】");

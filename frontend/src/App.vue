@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "./api.js";
 import MapView from "./components/MapView.vue";
@@ -42,6 +42,14 @@ const loyalty = ref([]);
 const historyStatus = ref({ fired: [], diverged: [] });
 //: 右侧分组：决断 / 军事 / 人物 / 史实
 const panel = ref("decide");
+//: 官职的显示名。数字与代码留在数据里，界面只给人读的字。
+const RANK_LABELS = { 1: "一品", 2: "二品", 3: "三品", 4: "四品", 5: "五品" };
+const KIND_LABELS = {
+  military: "统兵",
+  civil: "文职",
+  envoy: "使职",
+  sinecure: "闲职",
+};
 
 const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
@@ -423,7 +431,10 @@ onMounted(boot);
             <span class="p-name">{{ p.name }}</span>
             <span class="p-status">{{ p.status }}</span>
           </div>
-          <div class="p-meta">{{ p.office || "无官职" }} · 统兵 {{ p.troops.toLocaleString() }}</div>
+          <div class="p-meta">
+            {{ p.office || "无官职" }}（{{ RANK_LABELS[p.office_rank] || p.office_rank + " 品" }}·{{ KIND_LABELS[p.office_kind] || p.office_kind }}）
+            · 统兵 {{ p.troops.toLocaleString() }}
+          </div>
           <div class="p-bars">
             <span class="bar"><i :style="{ width: p.loyalty * 100 + '%' }"></i></span>
             <span class="bar-label">忠 {{ p.loyalty.toFixed(2) }}</span>

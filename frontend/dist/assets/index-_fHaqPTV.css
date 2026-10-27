@@ -302,55 +302,95 @@
   font-family: "Consolas", "Microsoft YaHei", monospace;
 }
 
-.decision-panel[data-v-32c93159] { display: flex; flex-direction: column; gap: 10px;
+.decision-panel[data-v-f5da543f] { display: flex; flex-direction: column; gap: 10px;
 }
-.relation[data-v-32c93159] {
+
+/* ---------------------------------- 朝议 ---------------------------------- */
+.d-advice[data-v-f5da543f] {
+  border-left: 2px solid #3a4a58;
+  padding: 6px 0 6px 10px;
+  margin: 0 0 10px;
+}
+.adv-head[data-v-f5da543f] {
+  font-size: 10.5px;
+  color: #8fa1b0;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.adv-consensus[data-v-f5da543f] { color: #4ad89a; margin-left: 8px; letter-spacing: 0;
+}
+.adv-split[data-v-f5da543f] { color: #d8a24a; margin-left: 8px; letter-spacing: 0;
+}
+.adv-row[data-v-f5da543f] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(42, 53, 64, 0.55);
+}
+.adv-row[data-v-f5da543f]:last-child { border-bottom: none;
+}
+.adv-who[data-v-f5da543f] { font-size: 12px; color: #dfe7ee;
+}
+.adv-who i[data-v-f5da543f] { font-style: normal; font-size: 10px; color: #8fa1b0; margin-left: 6px;
+}
+.adv-say[data-v-f5da543f] { font-size: 11.5px; color: #c6d6e2; line-height: 1.6;
+}
+.adv-meta[data-v-f5da543f] { font-size: 10px; color: #8fa1b0;
+}
+.adv-meta b[data-v-f5da543f] { color: #c98f5a; font-weight: 500;
+}
+.adv-meta em[data-v-f5da543f] { font-style: normal; float: right; opacity: 0.75;
+}
+.d-option.favored[data-v-f5da543f] { border-color: rgba(216, 162, 74, 0.45);
+}
+.relation[data-v-f5da543f] {
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 11.5px; padding: 6px 10px; border-radius: 8px;
   background: #1d262f; border: 1px solid #2a3540;
 }
-.rel-label[data-v-32c93159] { color: #8fa1b0;
+.rel-label[data-v-f5da543f] { color: #8fa1b0;
 }
-.rel-value[data-v-32c93159] { font-weight: 600;
+.rel-value[data-v-f5da543f] { font-weight: 600;
 }
-.rel-value.ok[data-v-32c93159] { color: #4ad89a;
+.rel-value.ok[data-v-f5da543f] { color: #4ad89a;
 }
-.rel-value.warn[data-v-32c93159] { color: #d8a24a;
+.rel-value.warn[data-v-f5da543f] { color: #d8a24a;
 }
-.rel-value.danger[data-v-32c93159] { color: #d8614a;
+.rel-value.danger[data-v-f5da543f] { color: #d8614a;
 }
-.no-decision[data-v-32c93159] {
+.no-decision[data-v-f5da543f] {
   font-size: 11.5px; color: #8fa1b0; padding: 10px 12px;
   border: 1px dashed #2a3540; border-radius: 9px; line-height: 1.6;
 }
-.decision-card[data-v-32c93159] {
+.decision-card[data-v-f5da543f] {
   border: 1px solid rgba(216, 162, 74, 0.55);
   background: linear-gradient(180deg, rgba(216, 162, 74, 0.08), transparent);
   border-radius: 10px;
   padding: 11px 12px;
 }
-.d-head[data-v-32c93159] { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;
+.d-head[data-v-f5da543f] { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;
 }
-.d-date[data-v-32c93159] { font-size: 10.5px; color: #8fa1b0;
+.d-date[data-v-f5da543f] { font-size: 10.5px; color: #8fa1b0;
 }
-.d-title[data-v-32c93159] { font-size: 13.5px; font-weight: 600; color: #f0d6a8;
+.d-title[data-v-f5da543f] { font-size: 13.5px; font-weight: 600; color: #f0d6a8;
 }
-.d-desc[data-v-32c93159] { margin: 0 0 10px; font-size: 11.5px; line-height: 1.65; color: #c6d6e2;
+.d-desc[data-v-f5da543f] { margin: 0 0 10px; font-size: 11.5px; line-height: 1.65; color: #c6d6e2;
 }
-.d-options[data-v-32c93159] { display: flex; flex-direction: column; gap: 6px;
+.d-options[data-v-f5da543f] { display: flex; flex-direction: column; gap: 6px;
 }
-.d-option[data-v-32c93159] {
+.d-option[data-v-f5da543f] {
   display: flex; flex-direction: column; gap: 2px;
   text-align: left; padding: 8px 10px; border-radius: 8px;
   border: 1px solid #2a3540; background: #1d262f; cursor: pointer;
 }
-.d-option[data-v-32c93159]:hover:not(:disabled) { border-color: #d8a24a; background: rgba(216, 162, 74, 0.08);
+.d-option[data-v-f5da543f]:hover:not(:disabled) { border-color: #d8a24a; background: rgba(216, 162, 74, 0.08);
 }
-.d-option[data-v-32c93159]:disabled { opacity: 0.5; cursor: progress;
+.d-option[data-v-f5da543f]:disabled { opacity: 0.5; cursor: progress;
 }
-.opt-label[data-v-32c93159] { font-size: 12.5px; color: #dfe7ee; font-weight: 600;
+.opt-label[data-v-f5da543f] { font-size: 12.5px; color: #dfe7ee; font-weight: 600;
 }
-.opt-detail[data-v-32c93159] { font-size: 10.5px; color: #8fa1b0; line-height: 1.5;
+.opt-detail[data-v-f5da543f] { font-size: 10.5px; color: #8fa1b0; line-height: 1.5;
 }
 
 .ending[data-v-afef3905] {

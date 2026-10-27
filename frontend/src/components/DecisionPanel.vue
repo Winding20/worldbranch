@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from "vue";
 
 const props = defineProps({
@@ -16,6 +16,14 @@ function relationClass(value) {
   if (value >= 0.35) return "ok";
   if (value >= 0.2) return "warn";
   return "danger";
+}
+
+//: 多数朝臣主张的那一项，在选项上加一圈高亮——但只是个提示，不是推荐。
+function isFavored(decision, option) {
+  const advice = decision.advice || [];
+  if (advice.length < 2) return false;
+  const count = advice.filter((a) => a.option_key === option.key).length;
+  return count * 2 > advice.length;
 }
 </script>
 
@@ -38,11 +46,30 @@ function relationClass(value) {
         <span class="d-title">{{ d.title }}</span>
       </div>
       <p class="d-desc">{{ d.description }}</p>
+
+      <div v-if="d.advice && d.advice.length" class="d-advice">
+        <div class="adv-head">
+          朝议
+          <span v-if="d.advice_consensus" class="adv-consensus">一致</span>
+          <span v-else class="adv-split">分歧</span>
+        </div>
+        <div v-for="a in d.advice" :key="a.character_key" class="adv-row">
+          <span class="adv-who">{{ a.name }}<i>{{ a.office }}</i></span>
+          <span class="adv-say">「{{ a.text }}」</span>
+          <span class="adv-meta">
+            主{{ a.option_label }}
+            <b v-if="a.tag">· {{ a.tag }}</b>
+            <em>才略 {{ a.ability }} 忠诚 {{ a.loyalty }}</em>
+          </span>
+        </div>
+      </div>
+
       <div class="d-options">
         <button
           v-for="opt in d.options"
           :key="opt.key"
           class="d-option"
+          :class="{ favored: isFavored(d, opt) }"
           :disabled="busy"
           @click="emit('resolve', d, opt)"
         >
@@ -56,6 +83,36 @@ function relationClass(value) {
 
 <style scoped>
 .decision-panel { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------------------------------- 朝议 ---------------------------------- */
+.d-advice {
+  border-left: 2px solid #3a4a58;
+  padding: 6px 0 6px 10px;
+  margin: 0 0 10px;
+}
+.adv-head {
+  font-size: 10.5px;
+  color: #8fa1b0;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.adv-consensus { color: #4ad89a; margin-left: 8px; letter-spacing: 0; }
+.adv-split { color: #d8a24a; margin-left: 8px; letter-spacing: 0; }
+.adv-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(42, 53, 64, 0.55);
+}
+.adv-row:last-child { border-bottom: none; }
+.adv-who { font-size: 12px; color: #dfe7ee; }
+.adv-who i { font-style: normal; font-size: 10px; color: #8fa1b0; margin-left: 6px; }
+.adv-say { font-size: 11.5px; color: #c6d6e2; line-height: 1.6; }
+.adv-meta { font-size: 10px; color: #8fa1b0; }
+.adv-meta b { color: #c98f5a; font-weight: 500; }
+.adv-meta em { font-style: normal; float: right; opacity: 0.75; }
+.d-option.favored { border-color: rgba(216, 162, 74, 0.45); }
 
 .relation {
   display: flex; justify-content: space-between; align-items: baseline;

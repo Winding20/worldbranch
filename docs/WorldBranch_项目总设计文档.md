@@ -1,4 +1,4 @@
-# WorldBranch（平行世界推演实验室）项目总设计文档
+﻿# WorldBranch（平行世界推演实验室）项目总设计文档
 
 > 版本：v2.0（定位调整为「唐史推演器」）
 > 日期：2026-10-27
@@ -75,6 +75,7 @@ v2.0 最重要的机制：**史实事件带前提**。
 | 五年结局评估 | ✅ | `engine/ending.py` |
 | BYOK：用户自带模型 | ✅ | `ai/providers.py`，Key 不落库 |
 | **唐史切片：人物 / 军队 / 州郡** | ✅ | `tang_755`、17 人、8 军、8 州郡 |
+| **官职：品级、性质、迁转** | ✅ | `engine/offices.py`、`office_rank` / `office_kind` |
 | **史实事件带前提、可改道** | ✅ | `engine/history.py`、`HistoricalEvent.conditions` |
 | **史实岔路口（把决定权交给玩家）** | ✅ | `HistoricalEvent.fork`、`history_fork` 决策 |
 | **战力取决于主帅** | ✅ | `engine/military.py` |

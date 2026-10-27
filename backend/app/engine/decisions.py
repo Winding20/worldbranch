@@ -25,6 +25,7 @@ from ..models import (
 )
 from ..utils import format_date
 from .counsel import attach_advice
+from .offices import SINECURE, apply_office
 from .military import candidates_for_command
 
 #: 同一类决策在这段时间内不重复提出（月）
@@ -463,20 +464,40 @@ def raise_decisions(
                     {
                         "key": "reward",
                         "label": "加官厚赏",
-                        "detail": f"府库 −{cost:,} 贯，忠诚回升，然此例一开，诸将效尤",
+                        "detail": (
+                            f"府库 −{cost:,} 贯，授同中书门下平章事，"
+                            "忠诚回升，然此例一开，诸将效尤"
+                        ),
                         "effects": {
                             "treasury": -cost,
                             "loyalty": {person.character_key: 0.15},
+                            "office": {
+                                person.character_key: {
+                                    "title": "同中书门下平章事",
+                                    "rank": 2,
+                                    "kind": "civil",
+                                }
+                            },
                             "legitimacy": -0.02,
                         },
                     },
                     {
                         "key": "strip_command",
                         "label": "削其兵权",
-                        "detail": "夺其军、调京任职；忠诚大跌，若其部曲不服则生变",
+                        "detail": (
+                            f"夺其军，改授{SINECURE['title']}（闲职）；"
+                            "忠诚大跌，若其部曲不服则生变"
+                        ),
                         "effects": {
                             "loyalty": {person.character_key: -0.15},
                             "disarm": [a.army_key for a in own],
+                            "office": {
+                                person.character_key: {
+                                    "title": SINECURE["title"],
+                                    "rank": SINECURE["rank"],
+                                    "kind": SINECURE["kind"],
+                                }
+                            },
                             "legitimacy": 0.04,
                         },
                     },
@@ -673,6 +694,30 @@ def resolve_decision(
                     "label": f"{person.name}忠诚",
                     "before": round(before, 3),
                     "after": round(person.loyalty, 3),
+                    "unit": "",
+                }
+            )
+
+    # 改授官职：实权转闲职，或加官进爵
+    for char_key, spec in (effects.get("office") or {}).items():
+        person = session.scalar(
+            select(CharacterState).where(
+                CharacterState.branch_id == branch.id,
+                CharacterState.character_key == char_key,
+            )
+        )
+        if person is not None:
+            change = apply_office(
+                person,
+                title=spec["title"],
+                rank=int(spec.get("rank", person.office_rank)),
+                kind=spec.get("kind", person.office_kind),
+            )
+            applied.append(
+                {
+                    "label": f"{person.name}官职",
+                    "before": change.before,
+                    "after": change.after,
                     "unit": "",
                 }
             )
