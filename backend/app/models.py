@@ -213,6 +213,9 @@ class Army(Base):
     morale: Mapped[float] = mapped_column(Float, default=0.6)
     #: 0–1：粮饷充足程度
     supply: Mapped[float] = mapped_column(Float, default=0.6)
+    #: 成军之日。晚于此日才存在的军队（如回纥骑兵、九节度之师）
+    #: 不能算进开局的战力，否则 755 年的局势会被算错。
+    raises_at: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
 
     world: Mapped[World] = relationship(back_populates="armies")
 
@@ -267,8 +270,10 @@ class CharacterState(Base):
     character_key: Mapped[str] = mapped_column(String(64), index=True)
     name: Mapped[str] = mapped_column(String(64))
     faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    role: Mapped[str] = mapped_column(String(24), default="general")
     office: Mapped[str] = mapped_column(String(96), default="")
     loyalty: Mapped[float] = mapped_column(Float, default=0.5)
+    ambition: Mapped[float] = mapped_column(Float, default=0.2)
     ability: Mapped[float] = mapped_column(Float, default=0.5)
     location_region_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     alive: Mapped[bool] = mapped_column(default=True)
@@ -294,6 +299,10 @@ class ArmyState(Base):
     troops: Mapped[int] = mapped_column(Integer, default=0)
     morale: Mapped[float] = mapped_column(Float, default=0.6)
     supply: Mapped[float] = mapped_column(Float, default=0.6)
+    #: 满编兵额，成军时按此补足
+    troops_max: Mapped[int] = mapped_column(Integer, default=0)
+    raises_at: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    raised: Mapped[bool] = mapped_column(default=True)
 
 
 class HistoricalFire(Base):

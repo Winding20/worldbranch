@@ -9,6 +9,7 @@ from ..app_factory import get_db
 from ..engine import SimulationEngine
 from ..engine.ending import evaluate_ending
 from ..engine.history import history_status
+from ..engine.military import all_powers, candidates_for_command, side_strength
 from ..engine.decisions import (
     DecisionError,
     decision_history,
@@ -16,7 +17,15 @@ from ..engine.decisions import (
     pending_decisions,
     resolve_decision,
 )
-from ..models import Decision, FactionState, RegionState, SimEvent, Snapshot
+from ..models import (
+    ArmyState,
+    CharacterState,
+    Decision,
+    FactionState,
+    RegionState,
+    SimEvent,
+    Snapshot,
+)
 from ..utils import format_date
 from ..services import (
     aggregate_by_scale,
@@ -61,6 +70,38 @@ def resolve_decision_route(branch_id: int, decision_id: int):
             raise LookupError("决策不存在")
         event = resolve_decision(session, branch, decision, option)
         return jsonify({"decision": decision.to_dict(), "event": event.to_dict()})
+
+
+@bp.get("/<int:branch_id>/armies")
+def armies_route(branch_id: int):
+    """各军现状与战力，以及可用的主帅人选。"""
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        armies = list(
+            session.scalars(select(ArmyState).where(ArmyState.branch_id == branch_id))
+        )
+        characters = {
+            c.character_key: c
+            for c in session.scalars(
+                select(CharacterState).where(CharacterState.branch_id == branch_id)
+            )
+        }
+        return jsonify(
+            {
+                "armies": [p.to_dict() for p in all_powers(armies, characters)],
+                "tang_total": round(side_strength(armies, characters, "tang")),
+                "yan_total": round(side_strength(armies, characters, "yan")),
+                "candidates": [
+                    {
+                        "key": c.character_key,
+                        "name": c.name,
+                        "office": c.office,
+                        "ability": round(c.ability, 3),
+                    }
+                    for c in candidates_for_command(characters, "tang")
+                ],
+            }
+        )
 
 
 @bp.get("/<int:branch_id>/relations")

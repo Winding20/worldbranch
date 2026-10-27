@@ -270,9 +270,11 @@ ARMIES: list[dict[str, Any]] = [
     {"key": "suiyang_army", "name": "睢阳守军", "faction_key": "tang", "commander_key": "zhang_xun",
      "region_key": "suiyang", "troops": 7_000, "morale": 0.90, "supply": 0.35},
     {"key": "huihu_cavalry", "name": "回纥骑兵", "faction_key": "tang", "commander_key": None,
-     "region_key": "lingwu", "troops": 4_000, "morale": 0.90, "supply": 0.85},
+     "region_key": "lingwu", "troops": 4_000, "morale": 0.90, "supply": 0.85,
+     "raises_at": dt.date(762, 10, 1)},
     {"key": "yecheng_army", "name": "九节度之师", "faction_key": "tang", "commander_key": "pugu_huai_en",
-     "region_key": "luoyang", "troops": 200_000, "morale": 0.55, "supply": 0.45},
+     "region_key": "luoyang", "troops": 200_000, "morale": 0.55, "supply": 0.45,
+     "raises_at": dt.date(758, 9, 1)},
 ]
 
 # --------------------------------------------------------------------------- #

@@ -204,6 +204,15 @@ class SimulationEngine:
 
         for step in range(months):
             self._tick(branch, regions, factions, step, profile, report, links)
+            # 到日子才成军的部队（回纥骑兵、九节度之师）在这里补上兵额
+            for army in armies.values():
+                if (
+                    not army.raised
+                    and army.raises_at is not None
+                    and army.raises_at <= branch.current_date
+                ):
+                    army.raised = True
+                    army.troops = army.troops_max
             branch.current_date = add_months(branch.current_date, 1)
             branch.tick_index += 1
             pending_snapshots.append(
@@ -287,6 +296,8 @@ class SimulationEngine:
             relations,
             shocked_keys=self._shocked_keys,
             rng=random.Random(f"{branch.seed}:{branch.tick_index}:decisions"),
+            characters=characters,
+            armies=armies,
         )
         report.decisions = [d.to_dict() for d in raised]
         report.relations = [r.snapshot() for r in relations.values()]

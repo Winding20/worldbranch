@@ -1,4 +1,4 @@
-﻿"""决策：世界主动向用户提出的问题。
+"""决策：世界主动向用户提出的问题。
 
 设计目的：让"用户不知道该干什么"变成"世界告诉你要决定什么"。
 每道决策都带 2–3 个选项，每个选项写明代价与后果，选完立即生效并留下事件。
@@ -14,7 +14,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import (
+    ArmyState,
     Branch,
+    CharacterState,
     Decision,
     FactionState,
     RegionState,
@@ -22,6 +24,7 @@ from ..models import (
     SimEvent,
 )
 from ..utils import format_date
+from .military import candidates_for_command
 
 #: 同一类决策在这段时间内不重复提出（月）
 COOLDOWN_TICKS = 12
@@ -30,17 +33,18 @@ COOLDOWN_TICKS = 12
 # --------------------------------------------------------------------------- #
 # 触发
 # --------------------------------------------------------------------------- #
-def _has_recent(session: Session, branch_id: int, kind: str, tick: int) -> bool:
-    found = session.scalar(
-        select(Decision.id)
-        .where(
-            Decision.branch_id == branch_id,
-            Decision.kind == kind,
-            Decision.tick_index >= tick - COOLDOWN_TICKS,
-        )
-        .limit(1)
+def _has_recent(
+    session: Session, branch_id: int, kind: str, tick: int, key: str | None = None
+) -> bool:
+    """同类决策在冷却期内是否已经提过；给了 key 就按对象分开算。"""
+    stmt = select(Decision.id).where(
+        Decision.branch_id == branch_id,
+        Decision.kind == kind,
+        Decision.tick_index >= tick - COOLDOWN_TICKS,
     )
-    return found is not None
+    if key is not None:
+        stmt = stmt.where(Decision.ref_key == key)
+    return session.scalar(stmt.limit(1)) is not None
 
 
 def _get_relation(relations: dict[str, RelationState], key: str) -> RelationState | None:
@@ -55,6 +59,8 @@ def raise_decisions(
     relations: dict[str, RelationState],
     shocked_keys: set[str] | None = None,
     rng: random.Random | None = None,
+    characters: dict[str, CharacterState] | None = None,
+    armies: dict[str, ArmyState] | None = None,
 ) -> list[Decision]:
     """按当前局势决定要不要向用户提问题。
 
@@ -64,6 +70,8 @@ def raise_decisions(
     created: list[Decision] = []
     tick = branch.tick_index
     shocked_keys = shocked_keys or set()
+    characters = characters or {}
+    armies = armies or {}
     rng = rng or random.Random(f"{branch.seed}:{tick}:decisions")
     by_key = {r.region_key: r for r in regions}
     fanzhen = factions.get("fanzhen")
@@ -359,6 +367,57 @@ def raise_decisions(
             )
         )
 
+    # 7) 主帅空缺：某支军队没了主将，得派人去带
+    for army in armies.values():
+        if army.faction_key != "tang":
+            continue
+        commander = characters.get(army.commander_key or "")
+        if commander is not None and commander.alive:
+            continue
+        if _has_recent(session, branch.id, "appoint_commander", tick, key=army.army_key):
+            continue
+        pool = candidates_for_command(characters, "tang", limit=3)
+        if not pool:
+            continue
+
+        options = [
+            {
+                "key": f"appoint_{person.character_key}",
+                "label": f"以{person.name}为帅",
+                "detail": (
+                    f"{person.office or '将领'}，才略 {person.ability:.2f}；"
+                    f"接掌{army.name}后士气回升"
+                ),
+                "effects": {
+                    "commander": {army.army_key: person.character_key},
+                    "morale": {army.army_key: 0.10},
+                },
+            }
+            for person in pool
+        ]
+        options.append(
+            {
+                "key": "appoint_none",
+                "label": "暂不遣帅，令副将权领",
+                "detail": "不费钱粮，但无主帅之军战力大减，士气继续下滑",
+                "effects": {"morale": {army.army_key: -0.08}},
+            }
+        )
+        created.append(
+            _make(
+                branch,
+                kind="appoint_commander",
+                ref_key=army.army_key,
+                title=f"{army.name}无主帅",
+                description=(
+                    f"{army.name}主帅{commander.name if commander else '（空缺）'}"
+                    f"{'已殁' if commander else ''}，军中无主，诸将相持不下。"
+                    "朝廷须择人接掌，否则战力日削。"
+                ),
+                options=options,
+            )
+        )
+
     for decision in created:
         session.add(decision)
     if created:
@@ -374,6 +433,7 @@ def _make(
     description: str,
     options: list[dict],
     trigger_event_id: int | None = None,
+    ref_key: str | None = None,
 ) -> Decision:
     return Decision(
         branch_id=branch.id,
@@ -383,6 +443,7 @@ def _make(
         title=title,
         description=description,
         trigger_event_id=trigger_event_id,
+        ref_key=ref_key,
         options=options,
         status="pending",
     )
@@ -517,6 +578,49 @@ def resolve_decision(
                     "label": f"{region.name}税率",
                     "before": round(before, 3),
                     "after": round(region.tax_rate, 3),
+                    "unit": "",
+                }
+            )
+
+    # 任命主帅：换人之后，这支军队的战力会立刻变
+    for army_key, person_key in (effects.get("commander") or {}).items():
+        army = session.scalar(
+            select(ArmyState).where(
+                ArmyState.branch_id == branch.id, ArmyState.army_key == army_key
+            )
+        )
+        person = session.scalar(
+            select(CharacterState).where(
+                CharacterState.branch_id == branch.id,
+                CharacterState.character_key == person_key,
+            )
+        )
+        if army is not None and person is not None:
+            before = army.commander_key or "（空缺）"
+            army.commander_key = person_key
+            applied.append(
+                {
+                    "label": f"{army.name}主帅",
+                    "before": before,
+                    "after": person.name,
+                    "unit": "",
+                }
+            )
+
+    for army_key, delta in (effects.get("morale") or {}).items():
+        army = session.scalar(
+            select(ArmyState).where(
+                ArmyState.branch_id == branch.id, ArmyState.army_key == army_key
+            )
+        )
+        if army is not None:
+            before = army.morale
+            army.morale = min(max(army.morale + float(delta), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": f"{army.name}士气",
+                    "before": round(before, 3),
+                    "after": round(army.morale, 3),
                     "unit": "",
                 }
             )

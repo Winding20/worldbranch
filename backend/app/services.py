@@ -1,4 +1,4 @@
-﻿"""世界与分支的服务层：创建、派生、查询。
+"""世界与分支的服务层：创建、派生、查询。
 
 放在引擎之外，避免引擎直接依赖 HTTP 或命令行。
 """
@@ -43,6 +43,13 @@ def get_world_by_key(session: Session, key: str) -> World:
 
 def list_worlds(session: Session) -> Sequence[World]:
     return list(session.scalars(select(World).order_by(World.id)))
+
+
+def _raised(raises_at: dt.date | None, start_date: dt.date) -> bool:
+    """成军之日早于（或等于）开局日期，才算开局已有此军。"""
+    if raises_at is None:
+        return True
+    return raises_at <= start_date
 
 
 def create_branch(
@@ -110,8 +117,10 @@ def create_branch(
                 character_key=person.key,
                 name=person.name,
                 faction_key=person.faction_key,
+                role=person.role,
                 office=person.office,
                 loyalty=person.loyalty,
+                ambition=person.ambition,
                 ability=person.ability,
                 location_region_key=person.location_region_key,
                 alive=person.alive,
@@ -126,9 +135,13 @@ def create_branch(
                 faction_key=army.faction_key,
                 commander_key=army.commander_key,
                 region_key=army.region_key,
-                troops=army.troops,
+                # 尚未成军的部队先按零兵计，免得开局战力虚高
+                troops=army.troops if _raised(army.raises_at, world.start_date) else 0,
                 morale=army.morale,
                 supply=army.supply,
+                troops_max=army.troops,
+                raises_at=army.raises_at,
+                raised=_raised(army.raises_at, world.start_date),
             )
         )
     session.flush()
