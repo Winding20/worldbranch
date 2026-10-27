@@ -17,6 +17,7 @@ from .models import (
     FactionState,
     Region,
     RegionState,
+    SimEvent,
     World,
 )
 
@@ -146,6 +147,33 @@ def fork_branch(
                 military=state.military,
             )
         )
+
+    # 派生点之前的历史是两条时间线共有的既成事实，一并复制；
+    # 派生之后各自产生的事件才互相隔离。
+    for event in session.scalars(
+        select(SimEvent).where(
+            SimEvent.branch_id == source.id,
+            SimEvent.tick_index <= source.tick_index,
+        )
+    ):
+        session.add(
+            SimEvent(
+                branch_id=branch.id,
+                game_date=event.game_date,
+                tick_index=event.tick_index,
+                scope=event.scope,
+                kind=event.kind,
+                severity=event.severity,
+                duration_months=event.duration_months,
+                title=event.title,
+                summary=event.summary,
+                region_keys=list(event.region_keys or []),
+                faction_keys=list(event.faction_keys or []),
+                causes=list(event.causes or []),
+                metrics=dict(event.metrics or {}),
+            )
+        )
+
     session.flush()
     return branch
 

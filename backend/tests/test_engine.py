@@ -114,6 +114,37 @@ def test_fork_is_isolated(db_session):
     assert fork.current_date != source.current_date
 
 
+def test_fork_inherits_history_up_to_fork_point(db_session):
+    source = _tang_branch(db_session, seed=11)
+    engine = SimulationEngine(db_session)
+    engine.advance(source, months=12)
+    db_session.flush()
+
+    source_events = list(
+        db_session.scalars(select(SimEvent).where(SimEvent.branch_id == source.id))
+    )
+    fork = fork_branch(db_session, source)
+    db_session.flush()
+
+    fork_events = list(
+        db_session.scalars(select(SimEvent).where(SimEvent.branch_id == fork.id))
+    )
+    assert len(fork_events) == len(source_events)
+    assert {e.tick_index for e in fork_events} == {e.tick_index for e in source_events}
+
+    # 派生之后各自新增的事件互不影响
+    engine.advance(fork, months=6)
+    db_session.flush()
+    fork_after = list(
+        db_session.scalars(select(SimEvent).where(SimEvent.branch_id == fork.id))
+    )
+    source_after = list(
+        db_session.scalars(select(SimEvent).where(SimEvent.branch_id == source.id))
+    )
+    assert len(source_after) == len(source_events)
+    assert len(fork_after) >= len(fork_events)
+
+
 def test_precision_filters_event_detail(db_session):
     macro = _tang_branch(db_session, seed=5, precision="macro")
     deep = _tang_branch(db_session, seed=5, precision="deep")
