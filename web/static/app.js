@@ -346,6 +346,28 @@
     }
   }
 
+  async function resolveBranch() {
+    // 刷新页面时复用该世界最新的分支，避免每次刷新都新开一条时间线
+    try {
+      const list = await api(`/api/worlds/${state.world}/branches`);
+      if (Array.isArray(list) && list.length) {
+        const latest = list[0];
+        state.precision = latest.precision;
+        return latest;
+      }
+    } catch (err) {
+      /* 没有分支就新建 */
+    }
+    return api(`/api/worlds/${state.world}/branches`, {
+      method: "POST",
+      body: JSON.stringify({
+        precision: state.precision,
+        seed: 1,
+        name: "唐朝·主时间线",
+      }),
+    });
+  }
+
   async function boot() {
     bindMapInteractions();
     $("scopeSelect").addEventListener("change", (e) => {
@@ -365,10 +387,7 @@
     });
 
     try {
-      const branch = await api(`/api/worlds/${state.world}/branches`, {
-        method: "POST",
-        body: JSON.stringify({ precision: state.precision, seed: 1, name: "唐朝·主时间线" }),
-      });
+      const branch = await resolveBranch();
       state.branchId = branch.id;
       await loadState();
       await loadEvents();

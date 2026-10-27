@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 
 from flask import Blueprint, jsonify, request
+from sqlalchemy import select
 
 from ..app_factory import get_db
 from ..models import Branch
@@ -78,6 +79,19 @@ def create_branch_route(key: str):
             start_date=parsed_start,
         )
         return jsonify(branch.to_dict()), 201
+
+
+@bp.get("/<key>/branches")
+def list_branches_route(key: str):
+    """列出该世界已有的分支，最新的在前。"""
+    with get_db().session() as session:
+        world = get_world_by_key(session, key)
+        rows = session.scalars(
+            select(Branch)
+            .where(Branch.world_id == world.id)
+            .order_by(Branch.id.desc())
+        )
+        return jsonify([b.to_dict() for b in rows])
 
 
 @bp.get("/<key>/map")
