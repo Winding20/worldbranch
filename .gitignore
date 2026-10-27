@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Node ---
+node_modules/
+.npm-cache/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# --- 项目本地 ---
+.db
+*.sqlite
+*.sqlite3
+.tmp/
+.env
+.env.*
+!.env.example
+*.log
+
+# --- 编辑器 / 系统 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
