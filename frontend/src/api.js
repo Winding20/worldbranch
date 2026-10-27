@@ -46,4 +46,6 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   snapshots: (id) => request(`/api/branches/${id}/snapshots?limit=120`),
+  compare: (left, right) =>
+    request(`/api/branches/compare?left=${left}&right=${right}`),
 };

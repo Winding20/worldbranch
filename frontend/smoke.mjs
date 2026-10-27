@@ -94,4 +94,42 @@ if (errors.length) {
   errors.slice(0, 5).forEach((e) => console.log("  -", e));
 }
 console.log(`\n渲染内容长度：${body.length}`);
+
+// ---- 第二个视图：分支对比 ----
+const tab = [...window.document.querySelectorAll(".view-tabs button")].find(
+  (b) => b.textContent.trim() === "分支对比"
+);
+console.log("\n【分支对比视图】");
+if (!tab) {
+  console.log("✗ 找不到「分支对比」标签页");
+  process.exit(1);
+}
+tab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+const compareDeadline = Date.now() + 15000;
+let compareText = "";
+while (Date.now() < compareDeadline) {
+  await wait(400);
+  const root = window.document.querySelector(".compare");
+  if (root && root.textContent.includes("地区状态差异")) break;
+}
+const compareRoot = window.document.querySelector(".compare");
+compareText = compareRoot ? compareRoot.textContent : "";
+
+const compareChecks = {
+  "对比页已渲染": !!compareRoot,
+  "有分支选择器": window.document.querySelectorAll(".compare select").length >= 2,
+  "有派生按钮": /派生/.test(compareText),
+  "有差异表格或同分支提示": /地区状态差异|同一条分支/.test(compareText),
+  "对比过程无运行时错误": errors.length === 0,
+};
+
+for (const [name, ok] of Object.entries(compareChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${name}`);
+  if (!ok) failed += 1;
+}
+if (errors.length) {
+  console.log("\n捕获到的错误：");
+  errors.slice(0, 5).forEach((e) => console.log("  -", e));
+}
 process.exit(failed === 0 ? 0 : 1);

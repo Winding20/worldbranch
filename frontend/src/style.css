@@ -62,6 +62,37 @@ html, body {
 .chip b { color: var(--text); }
 .chip.link:hover { border-color: var(--accent); color: var(--accent); }
 
+.view-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.view-tabs button {
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.view-tabs button.active {
+  background: rgba(74, 168, 216, 0.18);
+  color: var(--accent);
+}
+
+.compare-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg);
+}
+
 .layout {
   flex: 1;
   display: grid;

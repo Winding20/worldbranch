@@ -1,4 +1,4 @@
-﻿"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
+"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from ..utils import format_date
 from ..services import (
     apply_action,
     build_event_chain,
+    compare_branches,
     faction_meta,
     fork_branch,
     get_branch,
@@ -23,6 +24,20 @@ bp = Blueprint("branches", __name__, url_prefix="/api/branches")
 
 #: 事件范围对应的最小展示层级（越大越宏观）
 SCOPE_ORDER = {"local": 1, "region": 2, "nation": 3, "world": 4}
+
+
+@bp.get("/compare")
+def compare_route():
+    """对比两条时间线：状态差异、分叉点、各自独有的事件。"""
+    left_id = request.args.get("left", type=int)
+    right_id = request.args.get("right", type=int)
+    if not left_id or not right_id:
+        raise ValueError("需要 left 与 right 两个分支 id")
+
+    with get_db().session() as session:
+        left = get_branch(session, left_id)
+        right = get_branch(session, right_id)
+        return jsonify(compare_branches(session, left, right))
 
 
 @bp.get("/<int:branch_id>")

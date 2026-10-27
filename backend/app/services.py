@@ -374,3 +374,116 @@ def build_event_chain(
         "nodes": sorted(nodes.values(), key=lambda n: (n["game_date"], n["id"])),
         "edges": edges,
     }
+
+
+# --------------------------------------------------------------------------- #
+# 分支对比
+# --------------------------------------------------------------------------- #
+#: 对比时关注的地区指标
+REGION_METRICS = ("population", "grain_stock", "price_index", "unrest", "tax_rate")
+
+
+def ancestor_chain(session: Session, branch: Branch) -> list[Branch]:
+    """从当前分支一路回溯到根分支。"""
+    chain: list[Branch] = [branch]
+    seen = {branch.id}
+    current = branch
+    while current.parent_branch_id and current.parent_branch_id not in seen:
+        parent = session.get(Branch, current.parent_branch_id)
+        if parent is None:
+            break
+        chain.append(parent)
+        seen.add(parent.id)
+        current = parent
+    return chain
+
+
+def _event_signature(event: SimEvent) -> tuple:
+    """用来判断两条分支里是不是"同一件事"。
+
+    派生分支会复制派生点之前的历史事件，但主键是新的，所以不能比 id。
+    """
+    return (event.tick_index, event.kind, event.title)
+
+
+def compare_branches(session: Session, left: Branch, right: Branch) -> dict:
+    """对比两条时间线：状态差异 + 分叉点 + 各自独有的事件。"""
+    if left.world_id != right.world_id:
+        raise ValueError("只能对比同一个世界内的分支")
+
+    left_states = {
+        s.region_key: s
+        for s in session.scalars(
+            select(RegionState).where(RegionState.branch_id == left.id)
+        )
+    }
+    right_states = {
+        s.region_key: s
+        for s in session.scalars(
+            select(RegionState).where(RegionState.branch_id == right.id)
+        )
+    }
+
+    regions = []
+    for key in sorted(set(left_states) | set(right_states)):
+        a = left_states.get(key)
+        b = right_states.get(key)
+        name = (a or b).name
+        row = {"region_key": key, "name": name, "left": {}, "right": {}, "delta": {}}
+        for metric in REGION_METRICS:
+            av = getattr(a, metric, None)
+            bv = getattr(b, metric, None)
+            row["left"][metric] = av
+            row["right"][metric] = bv
+            if isinstance(av, (int, float)) and isinstance(bv, (int, float)):
+                row["delta"][metric] = round(bv - av, 4)
+            else:
+                row["delta"][metric] = None
+        regions.append(row)
+
+    left_events = list(
+        session.scalars(select(SimEvent).where(SimEvent.branch_id == left.id))
+    )
+    right_events = list(
+        session.scalars(select(SimEvent).where(SimEvent.branch_id == right.id))
+    )
+    left_sigs = {_event_signature(e) for e in left_events}
+    right_sigs = {_event_signature(e) for e in right_events}
+    common = left_sigs & right_sigs
+
+    def pick(events, sigs):
+        return sorted(
+            (e.to_dict() for e in events if _event_signature(e) in sigs),
+            key=lambda d: (d["game_date"], d["id"]),
+        )
+
+    # 分叉点：两条分支最近的共同祖先决定了它们从哪里开始不同
+    left_chain = {b.id: b for b in ancestor_chain(session, left)}
+    right_chain = {b.id: b for b in ancestor_chain(session, right)}
+    shared = set(left_chain) & set(right_chain)
+    common_ancestor = None
+    if shared:
+        # 取 tick 最大的那个共同祖先（离现在最近的汇合点）
+        common_ancestor = max(
+            (left_chain[i] for i in shared), key=lambda b: b.tick_index
+        )
+
+    return {
+        "left": left.to_dict(),
+        "right": right.to_dict(),
+        "regions": regions,
+        "events": {
+            "left_only": pick(left_events, left_sigs - right_sigs),
+            "right_only": pick(right_events, right_sigs - left_sigs),
+            "common_count": len(common),
+        },
+        "divergence": {
+            "common_ancestor_id": common_ancestor.id if common_ancestor else None,
+            "common_ancestor_name": common_ancestor.name if common_ancestor else None,
+            "same_branch": left.id == right.id,
+            #: left 是 right 的祖先（即 right 从 left 派生出来）
+            "left_ancestor_of_right": left.id in right_chain,
+            #: right 是 left 的祖先
+            "right_ancestor_of_left": right.id in left_chain,
+        },
+    }

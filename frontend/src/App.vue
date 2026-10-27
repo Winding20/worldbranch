@@ -4,6 +4,7 @@ import { api } from "./api.js";
 import MapView from "./components/MapView.vue";
 import EventFeed from "./components/EventFeed.vue";
 import RegionDetail from "./components/RegionDetail.vue";
+import BranchCompare from "./components/BranchCompare.vue";
 
 const WORLD = "tang_750";
 const PRECISIONS = [
@@ -23,6 +24,7 @@ const selected = ref("");
 const busy = ref(false);
 const message = ref("底层按规则逐月计算，不是整段交给 AI 总结。");
 const error = ref("");
+const view = ref("sim");
 
 const region = ref(null);
 
@@ -124,14 +126,22 @@ onMounted(boot);
       </div>
     </div>
     <div v-if="branch" class="branch-meta">
+      <nav class="view-tabs">
+        <button :class="{ active: view === 'sim' }" @click="view = 'sim'">推演</button>
+        <button :class="{ active: view === 'compare' }" @click="view = 'compare'">分支对比</button>
+      </nav>
       <span class="chip">时间 <b>{{ branch.current_date }}</b></span>
       <span class="chip">精度 <b>{{ PRECISIONS.find((p) => p.key === branch.precision)?.name }}</b></span>
       <span class="chip">已推进 <b>{{ branch.tick_index }}</b> 月</span>
-      <a class="chip link" href="/">旧版界面</a>
+      <a class="chip link" href="/legacy">旧版界面</a>
     </div>
   </header>
 
-  <main class="layout">
+  <main v-if="view === 'compare'" class="compare-main">
+    <BranchCompare :world="WORLD" :current-branch-id="branch ? branch.id : null" />
+  </main>
+
+  <main v-else class="layout">
     <section class="map-panel">
       <div class="map-toolbar">
         <div class="scale-group">

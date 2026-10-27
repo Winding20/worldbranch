@@ -165,6 +165,32 @@ python tools\bench_advance.py 60    # 计时
 界面上点击地区后可以：制造歉收、开仓赈济（花钱买粮）、增减税率。干预会写入事件流，
 并成为后续所有连锁反应的因果起点。
 
+## 时间线分支对比
+
+从任意时刻派生出一条新分支，两边各自推演，然后在「分支对比」页看差异：
+
+- 两条线各自的日期、进度、精度
+- 七个道的存粮 / 粮价 / 民变 / 税率 / 人口 逐项对比，带差值
+- 只在 A 发生、只在 B 发生的事件
+- 自动识别派生关系与共同祖先
+
+实测示例（`python tools/demo_compare.py`）：
+
+```
+A: 750-08-01  B: 750-08-01
+关系：B 从 A 派生 = True；共同祖先 = 甲：置之不理
+
+地区               存粮(A)         存粮(B)          差异
+河北道            578,796     1,478,800    +900,004
+河南道         10,079,400    11,198,500  +1,119,100
+
+只在 A 发生：河北道粮价高企 / 河北道民变风险升高
+只在 B 发生：（干预）河北道开仓赈济
+```
+
+注意河南的存粮在 B 里反而更多——因为 A 里河北缺粮要从河南调运，B 里开了仓就不用了。
+这就是跨区域传导在分支对比下的体现。
+
 ## API
 
 | 方法 | 路径 | 说明 |
@@ -178,6 +204,8 @@ python tools\bench_advance.py 60    # 计时
 | POST | `/api/branches/<id>/advance` | 推进 N 个月 |
 | POST | `/api/branches/<id>/actions` | 用户干预：制造歉收 / 开仓赈济 / 调整税率 |
 | GET | `/api/branches/<id>/events/<eid>/chain` | 回溯事件的上游因果链 |
+| POST | `/api/branches/<id>/fork` | 派生新分支 |
+| GET | `/api/branches/compare?left=&right=` | 对比两条时间线 |
 | GET | `/api/branches/<id>/state` | 当前状态 |
 | GET | `/api/branches/<id>/events` | 事件（支持 `min_scope`、`min_severity`） |
 | GET | `/api/branches/<id>/snapshots` | 快照历史 |
