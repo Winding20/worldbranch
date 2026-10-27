@@ -187,6 +187,8 @@ class Character(Base):
 
     location_region_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     alive: Mapped[bool] = mapped_column(default=True)
+    #: 是否曾由唐廷叛出。用来把"叛将"和"本就是燕军的人"区分开
+    defected: Mapped[bool] = mapped_column(default=False)
     bio: Mapped[str] = mapped_column(Text, default="")
     #: 出处，例如《旧唐书·安禄山传》
     source: Mapped[str] = mapped_column(String(200), default="")
@@ -277,6 +279,8 @@ class CharacterState(Base):
     ability: Mapped[float] = mapped_column(Float, default=0.5)
     location_region_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     alive: Mapped[bool] = mapped_column(default=True)
+    #: 是否曾由唐廷叛出。用来把"叛将"和"本就是燕军的人"区分开
+    defected: Mapped[bool] = mapped_column(default=False)
 
 
 class ArmyState(Base):

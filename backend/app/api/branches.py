@@ -9,6 +9,7 @@ from ..app_factory import get_db
 from ..engine import SimulationEngine
 from ..engine.ending import evaluate_ending
 from ..engine.history import history_status
+from ..engine.loyalty import loyalty_overview
 from ..engine.military import all_powers, candidates_for_command, side_strength
 from ..engine.decisions import (
     DecisionError,
@@ -70,6 +71,26 @@ def resolve_decision_route(branch_id: int, decision_id: int):
             raise LookupError("决策不存在")
         event = resolve_decision(session, branch, decision, option)
         return jsonify({"decision": decision.to_dict(), "event": event.to_dict()})
+
+
+@bp.get("/<int:branch_id>/loyalty")
+def loyalty_route(branch_id: int):
+    """人物忠诚一览：谁在带兵、功高到何种程度、谁在离心。"""
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        armies = {
+            a.army_key: a
+            for a in session.scalars(
+                select(ArmyState).where(ArmyState.branch_id == branch_id)
+            )
+        }
+        characters = {
+            c.character_key: c
+            for c in session.scalars(
+                select(CharacterState).where(CharacterState.branch_id == branch_id)
+            )
+        }
+        return jsonify(loyalty_overview(characters, armies))
 
 
 @bp.get("/<int:branch_id>/armies")

@@ -431,6 +431,65 @@ def raise_decisions(
             )
         )
 
+    # 8) 功臣拥兵自重：赏则费财，削则生变
+    from .loyalty import DEFECT_LOYALTY, WARNING_LOYALTY
+
+    for person in characters.values():
+        if not person.alive or person.faction_key != "tang":
+            continue
+        if person.role == "emperor":
+            continue
+        if not (DEFECT_LOYALTY < person.loyalty <= WARNING_LOYALTY):
+            continue
+        own = [a for a in armies.values() if a.commander_key == person.character_key]
+        if not own or sum(a.troops for a in own) <= 0:
+            continue
+        if _has_recent(session, branch.id, "reward_general", tick, key=person.character_key):
+            continue
+
+        cost = int(sum(a.troops for a in own) * 3)  # 兵越多，赏格越高
+        created.append(
+            _make(
+                branch,
+                kind="reward_general",
+                ref_key=person.character_key,
+                title=f"{person.name}拥兵自重",
+                description=(
+                    f"{person.name}（{person.office}）统兵在外，忠诚已降至 "
+                    f"{person.loyalty:.2f}，屡请入朝而托辞不至。"
+                    "朝中或请加赏以安其心，或请削其兵权。"
+                ),
+                options=[
+                    {
+                        "key": "reward",
+                        "label": "加官厚赏",
+                        "detail": f"府库 −{cost:,} 贯，忠诚回升，然此例一开，诸将效尤",
+                        "effects": {
+                            "treasury": -cost,
+                            "loyalty": {person.character_key: 0.15},
+                            "legitimacy": -0.02,
+                        },
+                    },
+                    {
+                        "key": "strip_command",
+                        "label": "削其兵权",
+                        "detail": "夺其军、调京任职；忠诚大跌，若其部曲不服则生变",
+                        "effects": {
+                            "loyalty": {person.character_key: -0.15},
+                            "disarm": [a.army_key for a in own],
+                            "legitimacy": 0.04,
+                        },
+                    },
+                    {
+                        "key": "ignore",
+                        "label": "不闻不问",
+                        "detail": "不费钱粮，但其离心日甚，恐终为患",
+                        "effects": {"loyalty": {person.character_key: -0.04}},
+                    },
+                ],
+            )
+        )
+
     for decision in created:
         session.add(decision)
     if created:
@@ -595,6 +654,46 @@ def resolve_decision(
                     "label": f"{region.name}税率",
                     "before": round(before, 3),
                     "after": round(region.tax_rate, 3),
+                    "unit": "",
+                }
+            )
+
+    # 忠诚变化：赏则回心，削则见疑
+    for key, delta in (effects.get("loyalty") or {}).items():
+        person = session.scalar(
+            select(CharacterState).where(
+                CharacterState.branch_id == branch.id, CharacterState.character_key == key
+            )
+        )
+        if person is not None:
+            before = person.loyalty
+            person.loyalty = min(max(person.loyalty + float(delta), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": f"{person.name}忠诚",
+                    "before": round(before, 3),
+                    "after": round(person.loyalty, 3),
+                    "unit": "",
+                }
+            )
+
+    # 削兵权：解主帅之职，兵额折损
+    for army_key in effects.get("disarm") or []:
+        army = session.scalar(
+            select(ArmyState).where(
+                ArmyState.branch_id == branch.id, ArmyState.army_key == army_key
+            )
+        )
+        if army is not None:
+            before_troops = army.troops
+            army.commander_key = None
+            army.troops = int(army.troops * 0.7)
+            army.morale = max(army.morale - 0.10, 0.0)
+            applied.append(
+                {
+                    "label": f"{army.name}兵额",
+                    "before": before_troops,
+                    "after": army.troops,
                     "unit": "",
                 }
             )

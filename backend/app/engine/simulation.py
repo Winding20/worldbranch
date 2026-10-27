@@ -27,7 +27,7 @@ from ..models import (
     TradeLink,
 )
 from ..utils import format_date
-from . import decisions, history, rules
+from . import decisions, history, loyalty, rules
 
 #: 精度档位 -> (最低事件等级, 是否生成局部事件, 灾害骰子次数)
 PRECISION_PROFILE: dict[str, tuple[int, bool, int]] = {
@@ -67,6 +67,8 @@ class TickReport:
     history_fired: list[dict[str, Any]] = field(default_factory=list)
     history_diverged: list[dict[str, Any]] = field(default_factory=list)
     history_forks: list[dict[str, Any]] = field(default_factory=list)
+    #: 本轮叛离的人物
+    defections: list[dict[str, Any]] = field(default_factory=list)
     #: 是否因为出现岔路口而提前停下
     paused: bool = False
 
@@ -86,6 +88,7 @@ class TickReport:
             "history_fired": self.history_fired,
             "history_diverged": self.history_diverged,
             "history_forks": self.history_forks,
+            "defections": self.defections,
             "paused": self.paused,
         }
 
@@ -204,6 +207,28 @@ class SimulationEngine:
 
         for step in range(months):
             self._tick(branch, regions, factions, step, profile, report, links)
+            # 忠诚每月缓变：功高者渐生异志，朝廷威望不振则人心离散
+            if characters:
+                loyalty.monthly_drift(characters, armies, factions.get("tang"))
+                defectors = loyalty.check_defection(
+                    self.session, branch, characters, armies
+                )
+                for item in defectors:
+                    report.defections.append(item)
+                    self._emit(
+                        branch, report,
+                        kind="defection", scope="nation", severity=5,
+                        title=f"{item['name']}叛归燕军",
+                        summary=(
+                            f"{item['name']}拥兵 {item['troops']:,}，"
+                            f"忠诚已降至 {item['loyalty']:.2f}，遂叛。"
+                            + (f" 失{item['regions'][0]}。" if item["regions"] else "")
+                        ),
+                        region_keys=[], faction_keys=["tang"],
+                        causes=[{"rule": "defection", "character": item["character_key"]}],
+                        metrics={"defection": item}, min_severity=0,
+                    )
+
             # 到日子才成军的部队（回纥骑兵、九节度之师）在这里补上兵额
             for army in armies.values():
                 if (
