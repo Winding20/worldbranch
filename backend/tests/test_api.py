@@ -118,6 +118,26 @@ def test_advance_rejects_bad_input(client):
 
 
 def test_index_page_served(client):
+    """根路径要么重定向到 Vue 界面，要么回退到旧版页面。"""
     resp = client.get("/")
+    assert resp.status_code in (200, 302)
+    if resp.status_code == 200:
+        assert "WorldBranch" in resp.get_data(as_text=True)
+    else:
+        assert resp.headers["Location"].endswith("/app/")
+
+
+def test_legacy_page_served(client):
+    resp = client.get("/legacy")
     assert resp.status_code == 200
     assert "WorldBranch" in resp.get_data(as_text=True)
+
+
+def test_vue_app_is_served(client):
+    """Vue 版构建产物应当挂在 /app/ 下。"""
+    resp = client.get("/app/")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        body = resp.get_data(as_text=True)
+        assert '<div id="app">' in body
+        assert "/app/assets/" in body

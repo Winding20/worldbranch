@@ -1,0 +1,97 @@
+// 无浏览器环境下的渲染冒烟测试。
+//
+// 思路：把 Vue 应用打成 IIFE 包（jsdom 不支持 ES module），
+// 在 jsdom 里加载并挂载，注入一个走真实后端接口的 fetch，
+// 然后断言页面里出现了地区名和事件流。
+//
+// 用法：node smoke.mjs [后端地址]
+
+import { JSDOM } from "jsdom";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const BASE = process.argv[2] || "http://127.0.0.1:5210";
+const BUNDLE = path.join(HERE, "dist-smoke", "app.js");
+const CSS = fs
+  .readdirSync(path.join(HERE, "dist", "assets"))
+  .filter((f) => f.endsWith(".css"))
+  .map((f) => path.join(HERE, "dist", "assets", f))[0];
+
+if (!fs.existsSync(BUNDLE)) {
+  console.error("缺少 IIFE 包，请先执行 node build.mjs");
+  process.exit(2);
+}
+
+const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div id="app"></div></body></html>`;
+
+const dom = new JSDOM(html, {
+  url: BASE + "/app/",
+  runScripts: "outside-only",
+  pretendToBeVisual: true,
+});
+const { window } = dom;
+
+// 让应用能真的调到后端
+window.fetch = (input, init) => {
+  const url = typeof input === "string" && input.startsWith("http") ? input : BASE + input;
+  return fetch(url, init);
+};
+window.matchMedia =
+  window.matchMedia ||
+  (() => ({ matches: false, addListener() {}, removeListener() {} }));
+
+if (CSS) {
+  const style = window.document.createElement("style");
+  style.textContent = fs.readFileSync(CSS, "utf8");
+  window.document.head.appendChild(style);
+}
+
+const errors = [];
+window.addEventListener("error", (e) => errors.push(e.message));
+window.addEventListener("unhandledrejection", (e) => errors.push(String(e.reason)));
+
+const code = fs.readFileSync(BUNDLE, "utf8");
+window.eval(code);
+
+function wait(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+const deadline = Date.now() + 20000;
+let body = "";
+while (Date.now() < deadline) {
+  await wait(400);
+  body = window.document.getElementById("app").innerHTML;
+  // 等到地图上真的画出地区标签为止（"道界"这类图例文字不算）
+  const labels = window.document.querySelectorAll("text.region-label");
+  if (labels.length > 0) break;
+}
+// 再多等一拍，让事件流也渲染完
+await wait(600);
+body = window.document.getElementById("app").innerHTML;
+const regionLabels = window.document.querySelectorAll("text.region-label");
+const eventCards = window.document.querySelectorAll(".event-item");
+
+const checks = {
+  "已挂载": body.length > 200,
+  "出现地图 SVG": body.includes("<svg"),
+  "地区标签 7 个": regionLabels.length === 7,
+  "出现地区名": /关内道|河南道|河北道/.test(body),
+  "事件流已渲染": body.includes("事件流"),
+  "出现模拟控制": body.includes("推进"),
+  "无运行时错误": errors.length === 0,
+};
+
+let failed = 0;
+for (const [name, ok] of Object.entries(checks)) {
+  console.log(`${ok ? "✓" : "✗"} ${name}`);
+  if (!ok) failed += 1;
+}
+if (errors.length) {
+  console.log("\n捕获到的错误：");
+  errors.slice(0, 5).forEach((e) => console.log("  -", e));
+}
+console.log(`\n渲染内容长度：${body.length}`);
+process.exit(failed === 0 ? 0 : 1);

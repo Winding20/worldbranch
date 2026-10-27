@@ -20,6 +20,9 @@ dist/
 dist-ssr/
 *.local
 .vite/
+# Vue 前端构建产物需要随仓库走，方便服务器直接部署
+!frontend/dist/
+frontend/dist-smoke/
 
 # --- 项目本地 ---
 .db

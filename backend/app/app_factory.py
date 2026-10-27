@@ -1,4 +1,4 @@
-﻿"""应用工厂。"""
+"""应用工厂。"""
 
 from __future__ import annotations
 
@@ -36,9 +36,36 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/")
     def index():
+        """默认入口：新版 Vue 界面；没构建时回退到旧版静态页。"""
+        from flask import redirect, render_template
+
+        if (cfg.VUE_DIST / "index.html").exists():
+            return redirect("/app/")
+        return render_template("index.html")
+
+    @app.get("/legacy")
+    def legacy():
+        """旧版静态界面，保留作为回退。"""
         from flask import render_template
 
         return render_template("index.html")
+
+    # ---- Vue 3 新界面：构建产物由 Vite 输出到 frontend/dist ----
+    vue_dist = cfg.VUE_DIST
+
+    @app.get("/app/")
+    @app.get("/app/<path:subpath>")
+    def vue_app(subpath: str = ""):
+        from flask import abort, send_from_directory
+
+        if not (vue_dist / "index.html").exists():
+            abort(404, "前端尚未构建：在 frontend 目录执行 node build.mjs")
+        if not subpath or subpath == "index.html":
+            return send_from_directory(vue_dist, "index.html")
+        if not (vue_dist / subpath).is_file():
+            # 单页应用：未知路径回落到 index.html
+            return send_from_directory(vue_dist, "index.html")
+        return send_from_directory(vue_dist, subpath)
 
     @app.get("/api/health")
     def health():

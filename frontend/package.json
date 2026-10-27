@@ -1,0 +1,19 @@
+{
+  "name": "worldbranch-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "smoke": "node smoke.mjs",
+    "dev": "vite --configLoader native"
+  },
+  "dependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "jsdom": "^30.1.3",
+    "vite": "^6.0.0"
+  }
+}
