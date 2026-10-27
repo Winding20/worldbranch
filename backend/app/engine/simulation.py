@@ -1,4 +1,4 @@
-"""模拟引擎：按规则推进时间、更新状态、生成事件。
+﻿"""模拟引擎：按规则推进时间、更新状态、生成事件。
 
 引擎只负责「算」，不做任何叙述性生成；AI 分析属于后续层。
 所有随机都来自按 (seed, tick) 派生的独立随机源，保证同一分支可复现。
@@ -147,6 +147,8 @@ class SimulationEngine:
         self._active_famine_event: dict[str, int] = {}
         #: 该分支最近一次用户干预（歉收）事件，按地区索引，用于串起因果链
         self._recent_shock: dict[str, int] = {}
+        #: 本轮发生过灾害的道，用于触发赈济类决策
+        self._shocked_keys: set[str] = set()
         recent = self.session.execute(
             select(SimEvent.id, SimEvent.region_keys)
             .where(
@@ -165,6 +167,14 @@ class SimulationEngine:
                 select(TradeLink).where(TradeLink.world_id == branch.world_id)
             )
         )
+        # 藩镇一旦敌视，河北粮道即被掐断——这是"拒不付饷"的真实代价
+        relation_now = self.session.scalar(
+            select(RelationState).where(
+                RelationState.branch_id == branch.id,
+                RelationState.from_key == "fanzhen",
+            )
+        )
+        self._blockade = relation_now is not None and relation_now.value < 0
 
         for step in range(months):
             self._tick(branch, regions, factions, step, profile, report, links)
@@ -222,7 +232,13 @@ class SimulationEngine:
                 rel.value = max(rel.value - 0.004 * months, -1.0)
 
         raised = decisions.raise_decisions(
-            self.session, branch, regions, factions, relations
+            self.session,
+            branch,
+            regions,
+            factions,
+            relations,
+            shocked_keys=self._shocked_keys,
+            rng=random.Random(f"{branch.seed}:{branch.tick_index}:decisions"),
         )
         report.decisions = [d.to_dict() for d in raised]
         report.relations = [r.snapshot() for r in relations.values()]
@@ -299,6 +315,7 @@ class SimulationEngine:
             if shock_kind:
                 # 灾情不只减产，还会让地方人心浮动——这是后续"赈济"决策的引信
                 region.unrest = min(region.unrest + 0.08, 1.0)
+                self._shocked_keys.add(region.region_key)
                 self._emit(
                     branch,
                     report,
@@ -576,6 +593,13 @@ class SimulationEngine:
             return
 
         by_key = {r.region_key: r for r in regions}
+        blockaded = getattr(self, "_blockade", False)
+        if blockaded:
+            links = [
+                link
+                for link in links
+                if "hebei" not in (link.from_key, link.to_key)
+            ]
         incoming: dict[str, list[TradeLink]] = {}
         for link in links:
             incoming.setdefault(link.to_key, []).append(link)

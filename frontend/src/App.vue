@@ -7,6 +7,7 @@ import RegionDetail from "./components/RegionDetail.vue";
 import BranchCompare from "./components/BranchCompare.vue";
 import AiPanel from "./components/AiPanel.vue";
 import DecisionPanel from "./components/DecisionPanel.vue";
+import EndingCard from "./components/EndingCard.vue";
 
 const WORLD = "tang_750";
 const PRECISIONS = [
@@ -34,6 +35,7 @@ const relations = ref([]);
 const changes = ref([]);
 const scenario = ref(null);
 const lastReport = ref(null);
+const ending = ref(null);
 
 const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
@@ -101,6 +103,15 @@ async function loadDecisions() {
   relations.value = await api.relations(branch.value.id);
 }
 
+async function loadEnding() {
+  if (!branch.value) return;
+  try {
+    ending.value = await api.ending(branch.value.id);
+  } catch (err) {
+    ending.value = null;
+  }
+}
+
 async function boot() {
   try {
     scenario.value = (await api.world(WORLD)).scenario || null;
@@ -109,6 +120,7 @@ async function boot() {
     await loadEvents();
     await loadView();
     await loadDecisions();
+    await loadEnding();
   } catch (err) {
     error.value = `初始化失败：${err.message}`;
   }
@@ -125,6 +137,7 @@ async function advance(months) {
     await loadState();
     await loadEvents();
     await loadDecisions();
+    await loadEnding();
     const bits = [`已推进 ${report.months} 个月（${report.from_date} → ${report.to_date}）`];
     if (report.event_count) bits.push(`新事件 ${report.event_count} 条`);
     if (report.decisions?.length) bits.push(`有 ${report.decisions.length} 件事等你决定`);
@@ -254,6 +267,11 @@ onMounted(boot);
     </section>
 
     <aside class="side-panel">
+      <div v-if="ending" class="panel-block">
+        <h2>五年之后</h2>
+        <EndingCard :ending="ending" />
+      </div>
+
       <div v-if="scenario" class="panel-block brief">
         <div class="brief-role">{{ scenario.role }}</div>
         <p class="brief-goal">{{ scenario.goal }}</p>

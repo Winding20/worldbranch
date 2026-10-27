@@ -1,4 +1,4 @@
-"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
+﻿"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from ..app_factory import get_db
 from ..engine import SimulationEngine
+from ..engine.ending import evaluate_ending
 from ..engine.decisions import (
     DecisionError,
     decision_history,
@@ -66,6 +67,17 @@ def relations_route(branch_id: int):
     with get_db().session() as session:
         get_branch(session, branch_id)
         return jsonify(describe_relation(session, branch_id))
+
+
+@bp.get("/<int:branch_id>/ending")
+def ending_route(branch_id: int):
+    """五年结局评估；未满五年返回 204。"""
+    with get_db().session() as session:
+        branch = get_branch(session, branch_id)
+        result = evaluate_ending(session, branch)
+        if result is None:
+            return ("", 204)
+        return jsonify(result)
 
 
 @bp.get("/<int:branch_id>/view")

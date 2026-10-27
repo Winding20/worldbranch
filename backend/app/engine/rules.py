@@ -1,4 +1,4 @@
-"""模拟规则：纯函数，不碰数据库、不碰随机数。
+﻿"""模拟规则：纯函数，不碰数据库、不碰随机数。
 
 把「条件变化后会发生什么」写成可执行、可单测的公式，
 是设计文档里「模拟规则」这一层的落地。
@@ -48,8 +48,10 @@ UNREST_PRICE_THRESHOLD = 1.6
 MILITARY_UPKEEP_RATIO = 2.0
 #: 百官俸禄、宫廷与行政等固定开销占岁入的比重
 COURT_OVERHEAD_RATIO = 0.3
-#: 财政赤字对合法性的削弱
-LEGITIMACY_PER_DEFICIT = 0.0004
+#: 财政赤字的合法性惩罚：按"每百万贯赤字扣 0.04"计，
+#: 而不是按贯数直接乘系数（那样一次 50 万贯赤字就会把合法性一次打光）
+LEGITIMACY_DEFICIT_SCALE = 1_000_000.0
+LEGITIMACY_DEFICIT_PENALTY = 0.04
 
 #: 调出方至少要保住的存粮月数（不能把保命粮卖光）
 EXPORT_SAFETY_MONTHS = 3.0
@@ -159,7 +161,8 @@ def step_faction(
     overhead = revenue * COURT_OVERHEAD_RATIO
     net = treasury + revenue - overhead - upkeep
     if net < 0:
-        legitimacy = max(legitimacy - abs(net) * LEGITIMACY_PER_DEFICIT, 0.0)
+        penalty = min(abs(net) / LEGITIMACY_DEFICIT_SCALE, 1.0) * LEGITIMACY_DEFICIT_PENALTY
+        legitimacy = max(legitimacy - penalty, 0.0)
     else:
         legitimacy = min(legitimacy + 0.002, 1.0)
     return net, legitimacy, military

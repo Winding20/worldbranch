@@ -82,4 +82,5 @@ export const api = {
       body: JSON.stringify({ option }),
     }),
   relations: (id) => request(`/api/branches/${id}/relations`),
+  ending: (id) => request(`/api/branches/${id}/ending`),
 };

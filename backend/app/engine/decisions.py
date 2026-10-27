@@ -1,4 +1,4 @@
-"""决策：世界主动向用户提出的问题。
+﻿"""决策：世界主动向用户提出的问题。
 
 设计目的：让"用户不知道该干什么"变成"世界告诉你要决定什么"。
 每道决策都带 2–3 个选项，每个选项写明代价与后果，选完立即生效并留下事件。
@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import random
 from typing import Any
 
 from sqlalchemy import select
@@ -52,10 +53,18 @@ def raise_decisions(
     regions: list[RegionState],
     factions: dict[str, FactionState],
     relations: dict[str, RelationState],
+    shocked_keys: set[str] | None = None,
+    rng: random.Random | None = None,
 ) -> list[Decision]:
-    """按当前局势决定要不要向用户提问题。"""
+    """按当前局势决定要不要向用户提问题。
+
+    ``shocked_keys`` 是本轮发生过灾害的道，用于触发赈济；
+    ``rng`` 由引擎按 (seed, tick) 派生，保证同一分支可复现。
+    """
     created: list[Decision] = []
     tick = branch.tick_index
+    shocked_keys = shocked_keys or set()
+    rng = rng or random.Random(f"{branch.seed}:{tick}:decisions")
     by_key = {r.region_key: r for r in regions}
     fanzhen = factions.get("fanzhen")
     tang = factions.get("tang")
@@ -112,8 +121,12 @@ def raise_decisions(
             )
         )
 
-    # 2) 某道缺粮或民变升高，是否赈济
-    troubled = [r for r in regions if r.unrest >= 0.35 or r.grain_stock <= 0]
+    # 2) 某道缺粮、受灾或民变升高，是否赈济
+    troubled = [
+        r
+        for r in regions
+        if r.unrest >= 0.2 or r.grain_stock <= 0 or r.region_key in shocked_keys
+    ]
     if troubled and not _has_recent(session, branch.id, "famine_relief", tick):
         worst = max(troubled, key=lambda r: (r.unrest, r.price_index))
         cost = int(worst.population * 0.42 * 1.2)
@@ -199,6 +212,148 @@ def raise_decisions(
                         "label": "留待后议",
                         "detail": "什么也不做，但臣属度每月自然下滑",
                         "effects": {"relation": {"fanzhen": -0.02}},
+                    },
+                ],
+            )
+        )
+
+    # 4) 吐蕃犯边：西北边防的周期性压力
+    longyou = by_key.get("longyou")
+    if (
+        longyou is not None
+        and rng.random() < 0.08
+        and not _has_recent(session, branch.id, "border_raid", tick)
+    ):
+        created.append(
+            _make(
+                branch,
+                kind="border_raid",
+                title="吐蕃寇边",
+                description=(
+                    "陇右急报：吐蕃骑兵越境掠边，鄯州告急。"
+                    "边将请求增兵，朝中则有人主张以财帛换安宁。"
+                ),
+                options=[
+                    {
+                        "key": "reinforce",
+                        "label": "增兵戍边",
+                        "detail": "府库 −400,000 贯，陇右民变 −0.05，军威立",
+                        "effects": {
+                            "treasury": -400_000,
+                            "unrest": {"longyou": -0.05},
+                            "legitimacy": 0.03,
+                        },
+                    },
+                    {
+                        "key": "bribe",
+                        "label": "赐帛议和",
+                        "detail": "府库 −250,000 贯，暂得安宁，但边镇离心 +0.04",
+                        "effects": {
+                            "treasury": -250_000,
+                            "relation": {"fanzhen": -0.04},
+                            "legitimacy": -0.02,
+                        },
+                    },
+                    {
+                        "key": "ignore",
+                        "label": "置之不理",
+                        "detail": "不花钱，陇右民变 +0.12，边患可能扩大",
+                        "effects": {"unrest": {"longyou": 0.12}, "legitimacy": -0.04},
+                    },
+                ],
+            )
+        )
+
+    # 5) 漕运受阻：江淮粮米运不出来
+    huainan = by_key.get("huainan")
+    jiangnan = by_key.get("jiangnan")
+    if (
+        huainan is not None
+        and jiangnan is not None
+        and (huainan.price_index > 1.25 or jiangnan.price_index > 1.25)
+        and not _has_recent(session, branch.id, "transport_break", tick)
+    ):
+        created.append(
+            _make(
+                branch,
+                kind="transport_break",
+                title="漕运受阻",
+                description=(
+                    "江淮粮船滞留，漕运不畅，关内粮价已有抬头的迹象。"
+                    "转运使请示：是改走陆路加急，还是暂缓漕运以减少损耗？"
+                ),
+                options=[
+                    {
+                        "key": "land_route",
+                        "label": "改走陆路",
+                        "detail": "府库 −350,000 贯，关内、河南粮价回落",
+                        "effects": {
+                            "treasury": -350_000,
+                            "unrest": {"guannei": -0.04, "henan": -0.04},
+                            "grain": {"guannei": 400_000},
+                        },
+                    },
+                    {
+                        "key": "suspend",
+                        "label": "暂缓漕运",
+                        "detail": "省下运费，但关内粮价 +0.15，民怨上升",
+                        "effects": {"unrest": {"guannei": 0.08}, "legitimacy": -0.01},
+                    },
+                    {
+                        "key": "requisition",
+                        "label": "就地强征民船",
+                        "detail": "不花钱，江淮民变 +0.12",
+                        "effects": {"unrest": {"huainan": 0.12, "jiangnan": 0.08}},
+                    },
+                ],
+            )
+        )
+
+    # 6) 藩镇彻底翻脸，兵锋相向
+    if (
+        allegiance is not None
+        and allegiance.value < -0.15
+        and not _has_recent(session, branch.id, "warlord_revolt", tick)
+    ):
+        created.append(
+            _make(
+                branch,
+                kind="warlord_revolt",
+                title="河北举兵",
+                description=(
+                    f"河北藩镇臣属度已跌至 {allegiance.value:.2f}，粮道断绝、使者不至。"
+                    "斥候报称其已在境内集结兵马，朝中议论纷纷。"
+                ),
+                options=[
+                    {
+                        "key": "suppress",
+                        "label": "下诏讨伐",
+                        "detail": "府库 −1,200,000 贯，威望 +0.10；若府库不足则威望大跌",
+                        "effects": {
+                            "treasury": -1_200_000,
+                            "legitimacy": 0.10,
+                            "unrest": {"hebei": 0.15},
+                            "relation": {"fanzhen": 0.05},
+                        },
+                    },
+                    {
+                        "key": "conciliate",
+                        "label": "遣使怀柔",
+                        "detail": "府库 −600,000 贯，臣属度 +0.25，但朝廷威望受损",
+                        "effects": {
+                            "treasury": -600_000,
+                            "relation": {"fanzhen": 0.25},
+                            "legitimacy": -0.05,
+                        },
+                    },
+                    {
+                        "key": "hold",
+                        "label": "固守关隘",
+                        "detail": "不花钱，但河北民变 +0.10，粮道继续断绝",
+                        "effects": {
+                            "unrest": {"hebei": 0.10},
+                            "legitimacy": -0.03,
+                        },
                     },
                 ],
             )
