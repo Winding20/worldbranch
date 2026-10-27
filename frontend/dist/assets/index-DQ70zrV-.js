@@ -102,6 +102,29 @@ const api = {
   snapshots: (id) => request(`/api/branches/${id}/snapshots?limit=120`),
   compare: (left, right) =>
     request(`/api/branches/compare?left=${left}&right=${right}`),
+
+  // ---- AI ----
+  providers: () => request("/api/ai/providers"),
+  saveProvider: (payload) =>
+    request("/api/ai/providers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  analyze: (branchId, question, eventId, apiKey) =>
+    request(`/api/ai/branches/${branchId}/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Key 只随这一次请求走，服务端用完即弃
+        "X-LLM-Key": apiKey || "",
+      },
+      body: JSON.stringify({ question, event_id: eventId }),
+    }),
+  material: (branchId, eventId) =>
+    request(
+      `/api/ai/branches/${branchId}/material` + (eventId ? `?event_id=${eventId}` : "")
+    ),
+  knowledge: (world) => request(`/api/ai/worlds/${world}/knowledge`),
 };
 
 const _export_sfc = (sfc, props) => {
@@ -112,25 +135,25 @@ const _export_sfc = (sfc, props) => {
   return target;
 };
 
-const _hoisted_1$4 = { class: "map-wrap" };
-const _hoisted_2$4 = ["viewBox"];
-const _hoisted_3$4 = ["transform"];
-const _hoisted_4$4 = ["d", "fill"];
-const _hoisted_5$4 = ["d", "fill"];
-const _hoisted_6$4 = ["d", "fill-opacity"];
-const _hoisted_7$4 = ["d", "onClick"];
-const _hoisted_8$4 = ["d"];
-const _hoisted_9$4 = {
+const _hoisted_1$5 = { class: "map-wrap" };
+const _hoisted_2$5 = ["viewBox"];
+const _hoisted_3$5 = ["transform"];
+const _hoisted_4$5 = ["d", "fill"];
+const _hoisted_5$5 = ["d", "fill"];
+const _hoisted_6$5 = ["d", "fill-opacity"];
+const _hoisted_7$5 = ["d", "onClick"];
+const _hoisted_8$5 = ["d"];
+const _hoisted_9$5 = {
   key: 1,
   "pointer-events": "none"
 };
-const _hoisted_10$4 = ["x", "y"];
-const _hoisted_11$4 = ["x", "y"];
-const _hoisted_12$4 = ["x", "y"];
-const _hoisted_13$3 = { class: "zoom-group" };
+const _hoisted_10$5 = ["x", "y"];
+const _hoisted_11$5 = ["x", "y"];
+const _hoisted_12$5 = ["x", "y"];
+const _hoisted_13$4 = { class: "zoom-group" };
 
 
-const _sfc_main$4 = {
+const _sfc_main$5 = {
   __name: 'MapView',
   props: {
   regions: { type: Array, default: () => [] },
@@ -348,7 +371,7 @@ rE(() => {
 __expose({ zoomAt, reset });
 
 return (_ctx, _cache) => {
-  return (ln(), lo("div", _hoisted_1$4, [
+  return (ln(), lo("div", _hoisted_1$5, [
     (ln(), lo("svg", {
       ref_key: "svgRef",
       ref: svgRef,
@@ -367,7 +390,7 @@ return (_ctx, _cache) => {
             stroke: "#0a0f14",
             "stroke-width": "1.6",
             "stroke-linejoin": "round"
-          }, null, 8, _hoisted_4$4))
+          }, null, 8, _hoisted_4$5))
         }), 128)),
         (ln(true), lo(i8, null, rU(shapes.value, (s) => {
           return (ln(), lo("path", {
@@ -375,7 +398,7 @@ return (_ctx, _cache) => {
             d: s.d,
             fill: regionFill(s.region),
             stroke: "none"
-          }, null, 8, _hoisted_5$4))
+          }, null, 8, _hoisted_5$5))
         }), 128)),
         (ln(true), lo(i8, null, rU(shapes.value.filter((x) => stressAlpha(x.region.price_index) > 0), (s) => {
           return (ln(), lo("path", {
@@ -385,7 +408,7 @@ return (_ctx, _cache) => {
             "fill-opacity": stressAlpha(s.region.price_index),
             stroke: "none",
             "pointer-events": "none"
-          }, null, 8, _hoisted_6$4))
+          }, null, 8, _hoisted_6$5))
         }), 128)),
         (ln(true), lo(i8, null, rU(shapes.value, (s) => {
           return (ln(), lo("path", {
@@ -396,7 +419,7 @@ return (_ctx, _cache) => {
             onClick: $event => (emit('select', s.region.region_key))
           }, [
             lf("title", null, eh(s.region.name), 1)
-          ], 8, _hoisted_7$4))
+          ], 8, _hoisted_7$5))
         }), 128)),
         (shapes.value.find((s) => s.region.region_key === __props.selected))
           ? (ln(), lo("path", {
@@ -406,10 +429,10 @@ return (_ctx, _cache) => {
               stroke: "#4aa8d8",
               "stroke-width": "3",
               "pointer-events": "none"
-            }, null, 8, _hoisted_8$4))
+            }, null, 8, _hoisted_8$5))
           : l_("", true),
         (macro.value)
-          ? (ln(), lo("g", _hoisted_9$4, [
+          ? (ln(), lo("g", _hoisted_9$5, [
               (ln(true), lo(i8, null, rU(factionLabels.value, (f) => {
                 return (ln(), lo("g", {
                   key: `fl-${f.key}`
@@ -419,7 +442,7 @@ return (_ctx, _cache) => {
                     y: f.y - 2,
                     class: "faction-label",
                     "text-anchor": "middle"
-                  }, eh(f.name), 9, _hoisted_10$4)
+                  }, eh(f.name), 9, _hoisted_10$5)
                 ]))
               }), 128))
             ]))
@@ -433,19 +456,19 @@ return (_ctx, _cache) => {
                   y: labelPos(s.region)[1] - 2,
                   class: "region-label",
                   "text-anchor": "middle"
-                }, eh(s.region.name), 9, _hoisted_11$4),
+                }, eh(s.region.name), 9, _hoisted_11$5),
                 lf("text", {
                   x: labelPos(s.region)[0],
                   y: labelPos(s.region)[1] + 14,
                   class: "region-sub",
                   "text-anchor": "middle"
-                }, " 粮价 " + eh((s.region.price_index || 1).toFixed(2)), 9, _hoisted_12$4)
+                }, " 粮价 " + eh((s.region.price_index || 1).toFixed(2)), 9, _hoisted_12$5)
               ]))
             }), 128))
-      ], 8, _hoisted_3$4)
-    ], 42, _hoisted_2$4)),
+      ], 8, _hoisted_3$5)
+    ], 42, _hoisted_2$5)),
     _cache[2] || (_cache[2] = lf("div", { class: "map-hint" }, "滚轮缩放 · 拖拽平移 · 点击地区查看详情与干预", -1)),
-    lf("div", _hoisted_13$3, [
+    lf("div", _hoisted_13$4, [
       lf("button", {
         title: "放大",
         onClick: _cache[0] || (_cache[0] = $event => (zoomAt(1.3)))
@@ -464,40 +487,40 @@ return (_ctx, _cache) => {
 }
 
 };
-const MapView = /*#__PURE__*/_export_sfc(_sfc_main$4, [['__scopeId',"data-v-e021cfbe"]]);
+const MapView = /*#__PURE__*/_export_sfc(_sfc_main$5, [['__scopeId',"data-v-e021cfbe"]]);
 
-const _hoisted_1$3 = { class: "event-list" };
-const _hoisted_2$3 = {
+const _hoisted_1$4 = { class: "event-list" };
+const _hoisted_2$4 = {
   key: 0,
   class: "empty"
 };
-const _hoisted_3$3 = { class: "row1" };
-const _hoisted_4$3 = { class: "date" };
-const _hoisted_5$3 = { class: "kind-tag" };
-const _hoisted_6$3 = {
+const _hoisted_3$4 = { class: "row1" };
+const _hoisted_4$4 = { class: "date" };
+const _hoisted_5$4 = { class: "kind-tag" };
+const _hoisted_6$4 = {
   key: 0,
   class: "cause-flag"
 };
-const _hoisted_7$3 = { class: "severity-dots" };
-const _hoisted_8$3 = ["onClick"];
-const _hoisted_9$3 = ["onClick"];
-const _hoisted_10$3 = {
+const _hoisted_7$4 = { class: "severity-dots" };
+const _hoisted_8$4 = ["onClick"];
+const _hoisted_9$4 = ["onClick"];
+const _hoisted_10$4 = {
   key: 0,
   class: "chain"
 };
-const _hoisted_11$3 = {
+const _hoisted_11$4 = {
   key: 0,
   class: "chain-empty"
 };
-const _hoisted_12$3 = { class: "chain-date" };
-const _hoisted_13$2 = { class: "chain-text" };
-const _hoisted_14$2 = {
+const _hoisted_12$4 = { class: "chain-date" };
+const _hoisted_13$3 = { class: "chain-text" };
+const _hoisted_14$3 = {
   key: 2,
   class: "chain-empty"
 };
 
 
-const _sfc_main$3 = {
+const _sfc_main$4 = {
   __name: 'EventFeed',
   props: {
   branchId: { type: Number, default: null },
@@ -585,25 +608,25 @@ function onCard(event) {
 }
 
 return (_ctx, _cache) => {
-  return (ln(), lo("div", _hoisted_1$3, [
+  return (ln(), lo("div", _hoisted_1$4, [
     (!visible.value.length)
-      ? (ln(), lo("div", _hoisted_2$3, "当前尺度下暂无事件，推进模拟试试。"))
+      ? (ln(), lo("div", _hoisted_2$4, "当前尺度下暂无事件，推进模拟试试。"))
       : l_("", true),
     (ln(true), lo(i8, null, rU(visible.value, (e) => {
       return (ln(), lo("div", {
         key: e.id,
         class: Y(["event-item", { expanded: isExpanded(e.id) }])
       }, [
-        lf("div", _hoisted_3$3, [
-          lf("span", _hoisted_4$3, eh(e.game_date), 1),
+        lf("div", _hoisted_3$4, [
+          lf("span", _hoisted_4$4, eh(e.game_date), 1),
           lf("span", {
             class: Y(["scope-tag", e.scope])
           }, eh({ local: "局部", region: "地区", nation: "国家", world: "世界" }[e.scope] || e.scope), 3),
-          lf("span", _hoisted_5$3, eh(KIND_LABEL[e.kind] || e.kind), 1),
+          lf("span", _hoisted_5$4, eh(KIND_LABEL[e.kind] || e.kind), 1),
           (hasCause(e))
-            ? (ln(), lo("span", _hoisted_6$3, "因果"))
+            ? (ln(), lo("span", _hoisted_6$4, "因果"))
             : l_("", true),
-          lf("span", _hoisted_7$3, [
+          lf("span", _hoisted_7$4, [
             (ln(), lo(i8, null, rU(5, (i) => {
               return lf("i", {
                 key: i,
@@ -615,15 +638,15 @@ return (_ctx, _cache) => {
         lf("div", {
           class: "title",
           onClick: $event => (onCard(e))
-        }, eh(e.title), 9, _hoisted_8$3),
+        }, eh(e.title), 9, _hoisted_8$4),
         lf("div", {
           class: "summary",
           onClick: $event => (onCard(e))
-        }, eh(e.summary), 9, _hoisted_9$3),
+        }, eh(e.summary), 9, _hoisted_9$4),
         (isExpanded(e.id))
-          ? (ln(), lo("div", _hoisted_10$3, [
+          ? (ln(), lo("div", _hoisted_10$4, [
               (loading.value.has(e.id))
-                ? (ln(), lo("div", _hoisted_11$3, "正在追溯因果…"))
+                ? (ln(), lo("div", _hoisted_11$4, "正在追溯因果…"))
                 : (parentsOf(e.id).length)
                   ? (ln(), lo(i8, { key: 1 }, [
                       _cache[0] || (_cache[0] = lf("div", { class: "chain-title" }, "因果链（由远及近）", -1)),
@@ -632,16 +655,16 @@ return (_ctx, _cache) => {
                           key: p.id,
                           class: "chain-node"
                         }, [
-                          lf("span", _hoisted_12$3, eh(p.game_date), 1),
+                          lf("span", _hoisted_12$4, eh(p.game_date), 1),
                           lf("span", {
                             class: Y(["scope-tag", p.scope])
                           }, eh({ local: "局部", region: "地区", nation: "国家", world: "世界" }[p.scope] || p.scope), 3),
-                          lf("span", _hoisted_13$2, eh(p.title), 1)
+                          lf("span", _hoisted_13$3, eh(p.title), 1)
                         ]))
                       }), 128)),
                       _cache[1] || (_cache[1] = lf("div", { class: "chain-arrow" }, "↓ 最终导致", -1))
                     ], 64))
-                  : (ln(), lo("div", _hoisted_14$2, "该事件由规则直接产生，没有上游事件。"))
+                  : (ln(), lo("div", _hoisted_14$3, "该事件由规则直接产生，没有上游事件。"))
             ]))
           : l_("", true)
       ], 2))
@@ -651,26 +674,26 @@ return (_ctx, _cache) => {
 }
 
 };
-const EventFeed = /*#__PURE__*/_export_sfc(_sfc_main$3, [['__scopeId',"data-v-270f9ada"]]);
+const EventFeed = /*#__PURE__*/_export_sfc(_sfc_main$4, [['__scopeId',"data-v-270f9ada"]]);
 
-const _hoisted_1$2 = {
+const _hoisted_1$3 = {
   key: 0,
   class: "empty"
 };
-const _hoisted_2$2 = { key: 1 };
-const _hoisted_3$2 = { class: "kv" };
-const _hoisted_4$2 = { class: "kv" };
-const _hoisted_5$2 = { key: 0 };
-const _hoisted_6$2 = { class: "kv" };
-const _hoisted_7$2 = { class: "kv" };
-const _hoisted_8$2 = { class: "kv" };
-const _hoisted_9$2 = { class: "kv" };
-const _hoisted_10$2 = { class: "kv" };
-const _hoisted_11$2 = { class: "kv" };
-const _hoisted_12$2 = { class: "actions" };
+const _hoisted_2$3 = { key: 1 };
+const _hoisted_3$3 = { class: "kv" };
+const _hoisted_4$3 = { class: "kv" };
+const _hoisted_5$3 = { key: 0 };
+const _hoisted_6$3 = { class: "kv" };
+const _hoisted_7$3 = { class: "kv" };
+const _hoisted_8$3 = { class: "kv" };
+const _hoisted_9$3 = { class: "kv" };
+const _hoisted_10$3 = { class: "kv" };
+const _hoisted_11$3 = { class: "kv" };
+const _hoisted_12$3 = { class: "actions" };
 
 
-const _sfc_main$2 = {
+const _sfc_main$3 = {
   __name: 'RegionDetail',
   props: {
   region: { type: Object, default: null },
@@ -704,46 +727,46 @@ function doAct(kind) {
 
 return (_ctx, _cache) => {
   return (!__props.region)
-    ? (ln(), lo("div", _hoisted_1$2, "点击地图上的地区"))
-    : (ln(), lo("div", _hoisted_2$2, [
-        lf("div", _hoisted_3$2, [
+    ? (ln(), lo("div", _hoisted_1$3, "点击地图上的地区"))
+    : (ln(), lo("div", _hoisted_2$3, [
+        lf("div", _hoisted_3$3, [
           _cache[4] || (_cache[4] = lf("span", null, "名称", -1)),
           lf("b", null, eh(__props.region.name), 1)
         ]),
-        lf("div", _hoisted_4$2, [
+        lf("div", _hoisted_4$3, [
           _cache[5] || (_cache[5] = lf("span", null, "人口", -1)),
           lf("b", null, [
             lv(eh(Number(__props.region.population).toLocaleString()), 1),
             (tag('population'))
-              ? (ln(), lo("em", _hoisted_5$2, eh(tag("population")), 1))
+              ? (ln(), lo("em", _hoisted_5$3, eh(tag("population")), 1))
               : l_("", true)
           ])
         ]),
-        lf("div", _hoisted_6$2, [
+        lf("div", _hoisted_6$3, [
           _cache[6] || (_cache[6] = lf("span", null, "存粮", -1)),
           lf("b", null, eh(Math.round(__props.region.grain_stock).toLocaleString()) + " 石", 1)
         ]),
-        lf("div", _hoisted_7$2, [
+        lf("div", _hoisted_7$3, [
           _cache[7] || (_cache[7] = lf("span", null, "可支撑", -1)),
           lf("b", null, eh((__props.region.grain_stock / (monthly.value || 1)).toFixed(1)) + " 个月", 1)
         ]),
-        lf("div", _hoisted_8$2, [
+        lf("div", _hoisted_8$3, [
           _cache[8] || (_cache[8] = lf("span", null, "粮价指数", -1)),
           lf("b", null, eh((__props.region.price_index || 1).toFixed(2)), 1)
         ]),
-        lf("div", _hoisted_9$2, [
+        lf("div", _hoisted_9$3, [
           _cache[9] || (_cache[9] = lf("span", null, "民变指数", -1)),
           lf("b", null, eh((__props.region.unrest || 0).toFixed(2)), 1)
         ]),
-        lf("div", _hoisted_10$2, [
+        lf("div", _hoisted_10$3, [
           _cache[10] || (_cache[10] = lf("span", null, "税率", -1)),
           lf("b", null, eh(((__props.region.tax_rate || 0) * 100).toFixed(0)) + "%", 1)
         ]),
-        lf("div", _hoisted_11$2, [
+        lf("div", _hoisted_11$3, [
           _cache[11] || (_cache[11] = lf("span", null, "所属势力", -1)),
           lf("b", null, eh(__props.region.faction_key || "—"), 1)
         ]),
-        lf("div", _hoisted_12$2, [
+        lf("div", _hoisted_12$3, [
           lf("button", {
             class: "act act-danger",
             onClick: _cache[0] || (_cache[0] = $event => (doAct('shock')))
@@ -767,45 +790,45 @@ return (_ctx, _cache) => {
 }
 
 };
-const RegionDetail = /*#__PURE__*/_export_sfc(_sfc_main$2, [['__scopeId',"data-v-5cb9696e"]]);
+const RegionDetail = /*#__PURE__*/_export_sfc(_sfc_main$3, [['__scopeId',"data-v-5cb9696e"]]);
 
-const _hoisted_1$1 = { class: "compare" };
-const _hoisted_2$1 = { class: "picker" };
-const _hoisted_3$1 = { class: "pick" };
-const _hoisted_4$1 = ["value"];
-const _hoisted_5$1 = { class: "pick" };
-const _hoisted_6$1 = ["value"];
-const _hoisted_7$1 = {
+const _hoisted_1$2 = { class: "compare" };
+const _hoisted_2$2 = { class: "picker" };
+const _hoisted_3$2 = { class: "pick" };
+const _hoisted_4$2 = ["value"];
+const _hoisted_5$2 = { class: "pick" };
+const _hoisted_6$2 = ["value"];
+const _hoisted_7$2 = {
   key: 0,
   class: "empty error"
 };
-const _hoisted_8$1 = {
+const _hoisted_8$2 = {
   key: 1,
   class: "empty"
 };
-const _hoisted_9$1 = {
+const _hoisted_9$2 = {
   key: 0,
   class: "empty"
 };
-const _hoisted_10$1 = {
+const _hoisted_10$2 = {
   key: 1,
   class: "summary"
 };
-const _hoisted_11$1 = { class: "card" };
-const _hoisted_12$1 = { class: "card-title" };
-const _hoisted_13$1 = { class: "card-meta" };
-const _hoisted_14$1 = { class: "card" };
-const _hoisted_15$1 = { class: "card-title" };
-const _hoisted_16$1 = { class: "card-meta" };
-const _hoisted_17$1 = { class: "card wide" };
-const _hoisted_18$1 = { class: "card-meta" };
-const _hoisted_19$1 = { key: 0 };
-const _hoisted_20$1 = { key: 1 };
-const _hoisted_21$1 = { key: 2 };
-const _hoisted_22$1 = { key: 3 };
-const _hoisted_23$1 = { class: "diff" };
-const _hoisted_24$1 = { class: "name" };
-const _hoisted_25$1 = { class: "vals" };
+const _hoisted_11$2 = { class: "card" };
+const _hoisted_12$2 = { class: "card-title" };
+const _hoisted_13$2 = { class: "card-meta" };
+const _hoisted_14$2 = { class: "card" };
+const _hoisted_15$2 = { class: "card-title" };
+const _hoisted_16$2 = { class: "card-meta" };
+const _hoisted_17$2 = { class: "card wide" };
+const _hoisted_18$2 = { class: "card-meta" };
+const _hoisted_19$2 = { key: 0 };
+const _hoisted_20$2 = { key: 1 };
+const _hoisted_21$2 = { key: 2 };
+const _hoisted_22$2 = { key: 3 };
+const _hoisted_23$2 = { class: "diff" };
+const _hoisted_24$2 = { class: "name" };
+const _hoisted_25$2 = { class: "vals" };
 const _hoisted_26$1 = { class: "events-cols" };
 const _hoisted_27$1 = { class: "col" };
 const _hoisted_28$1 = { class: "section" };
@@ -817,7 +840,7 @@ const _hoisted_30$1 = { class: "date" };
 const _hoisted_31$1 = { class: "t" };
 const _hoisted_32$1 = { class: "col" };
 const _hoisted_33$1 = { class: "section" };
-const _hoisted_34 = {
+const _hoisted_34$1 = {
   key: 0,
   class: "empty"
 };
@@ -825,7 +848,7 @@ const _hoisted_35 = { class: "date" };
 const _hoisted_36 = { class: "t" };
 
 
-const _sfc_main$1 = {
+const _sfc_main$2 = {
   __name: 'BranchCompare',
   props: {
   world: { type: String, required: true },
@@ -912,9 +935,9 @@ rw(async () => {
 });
 
 return (_ctx, _cache) => {
-  return (ln(), lo("div", _hoisted_1$1, [
-    lf("div", _hoisted_2$1, [
-      lf("div", _hoisted_3$1, [
+  return (ln(), lo("div", _hoisted_1$2, [
+    lf("div", _hoisted_2$2, [
+      lf("div", _hoisted_3$2, [
         _cache[2] || (_cache[2] = lf("label", null, "分支 A", -1)),
         nf(lf("select", {
           "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => ((leftId).value = $event))
@@ -923,14 +946,14 @@ return (_ctx, _cache) => {
             return (ln(), lo("option", {
               key: b.id,
               value: b.id
-            }, " #" + eh(b.id) + " " + eh(b.name) + "（" + eh(b.current_date) + "） ", 9, _hoisted_4$1))
+            }, " #" + eh(b.id) + " " + eh(b.name) + "（" + eh(b.current_date) + "） ", 9, _hoisted_4$2))
           }), 128))
         ], 512), [
           [oi, leftId.value]
         ])
       ]),
       _cache[4] || (_cache[4] = lf("div", { class: "vs" }, "对比", -1)),
-      lf("div", _hoisted_5$1, [
+      lf("div", _hoisted_5$2, [
         _cache[3] || (_cache[3] = lf("label", null, "分支 B", -1)),
         nf(lf("select", {
           "onUpdate:modelValue": _cache[1] || (_cache[1] = $event => ((rightId).value = $event))
@@ -939,7 +962,7 @@ return (_ctx, _cache) => {
             return (ln(), lo("option", {
               key: b.id,
               value: b.id
-            }, " #" + eh(b.id) + " " + eh(b.name) + "（" + eh(b.current_date) + "） ", 9, _hoisted_6$1))
+            }, " #" + eh(b.id) + " " + eh(b.name) + "（" + eh(b.current_date) + "） ", 9, _hoisted_6$2))
           }), 128))
         ], 512), [
           [oi, rightId.value]
@@ -951,39 +974,39 @@ return (_ctx, _cache) => {
       }, "从当前分支派生一条")
     ]),
     (error.value)
-      ? (ln(), lo("div", _hoisted_7$1, eh(error.value), 1))
+      ? (ln(), lo("div", _hoisted_7$2, eh(error.value), 1))
       : (loading.value)
-        ? (ln(), lo("div", _hoisted_8$1, "正在对比…"))
+        ? (ln(), lo("div", _hoisted_8$2, "正在对比…"))
         : (data.value)
           ? (ln(), lo(i8, { key: 2 }, [
               (data.value.divergence.same_branch)
-                ? (ln(), lo("div", _hoisted_9$1, " 选的是同一条分支，没有差异。派生一条新分支后再对比。 "))
-                : (ln(), lo("div", _hoisted_10$1, [
-                    lf("div", _hoisted_11$1, [
-                      lf("div", _hoisted_12$1, "A · " + eh(data.value.left.name), 1),
-                      lf("div", _hoisted_13$1, eh(data.value.left.current_date) + " · 已推进 " + eh(data.value.left.tick_index) + " 月 · " + eh(data.value.left.precision), 1)
+                ? (ln(), lo("div", _hoisted_9$2, " 选的是同一条分支，没有差异。派生一条新分支后再对比。 "))
+                : (ln(), lo("div", _hoisted_10$2, [
+                    lf("div", _hoisted_11$2, [
+                      lf("div", _hoisted_12$2, "A · " + eh(data.value.left.name), 1),
+                      lf("div", _hoisted_13$2, eh(data.value.left.current_date) + " · 已推进 " + eh(data.value.left.tick_index) + " 月 · " + eh(data.value.left.precision), 1)
                     ]),
-                    lf("div", _hoisted_14$1, [
-                      lf("div", _hoisted_15$1, "B · " + eh(data.value.right.name), 1),
-                      lf("div", _hoisted_16$1, eh(data.value.right.current_date) + " · 已推进 " + eh(data.value.right.tick_index) + " 月 · " + eh(data.value.right.precision), 1)
+                    lf("div", _hoisted_14$2, [
+                      lf("div", _hoisted_15$2, "B · " + eh(data.value.right.name), 1),
+                      lf("div", _hoisted_16$2, eh(data.value.right.current_date) + " · 已推进 " + eh(data.value.right.tick_index) + " 月 · " + eh(data.value.right.precision), 1)
                     ]),
-                    lf("div", _hoisted_17$1, [
+                    lf("div", _hoisted_17$2, [
                       _cache[5] || (_cache[5] = lf("div", { class: "card-title" }, "关系", -1)),
-                      lf("div", _hoisted_18$1, [
+                      lf("div", _hoisted_18$2, [
                         (data.value.divergence.left_ancestor_of_right)
-                          ? (ln(), lo("span", _hoisted_19$1, "B 从 A 派生而来"))
+                          ? (ln(), lo("span", _hoisted_19$2, "B 从 A 派生而来"))
                           : (data.value.divergence.right_ancestor_of_left)
-                            ? (ln(), lo("span", _hoisted_20$1, "A 从 B 派生而来"))
-                            : (ln(), lo("span", _hoisted_21$1, "两条独立分支")),
+                            ? (ln(), lo("span", _hoisted_20$2, "A 从 B 派生而来"))
+                            : (ln(), lo("span", _hoisted_21$2, "两条独立分支")),
                         (data.value.divergence.common_ancestor_name)
-                          ? (ln(), lo("span", _hoisted_22$1, " · 共同祖先：" + eh(data.value.divergence.common_ancestor_name), 1))
+                          ? (ln(), lo("span", _hoisted_22$2, " · 共同祖先：" + eh(data.value.divergence.common_ancestor_name), 1))
                           : l_("", true),
                         lf("span", null, " · 共有事件 " + eh(data.value.events.common_count) + " 条", 1)
                       ])
                     ])
                   ])),
               _cache[7] || (_cache[7] = lf("h3", { class: "section" }, "地区状态差异", -1)),
-              lf("table", _hoisted_23$1, [
+              lf("table", _hoisted_23$2, [
                 lf("thead", null, [
                   lf("tr", null, [
                     _cache[6] || (_cache[6] = lf("th", null, "地区", -1)),
@@ -999,13 +1022,13 @@ return (_ctx, _cache) => {
                     return (ln(), lo("tr", {
                       key: row.region_key
                     }, [
-                      lf("td", _hoisted_24$1, eh(row.name), 1),
+                      lf("td", _hoisted_24$2, eh(row.name), 1),
                       (ln(), lo(i8, null, rU(METRICS, (m) => {
                         return lf("td", {
                           key: m.key,
                           class: "metric"
                         }, [
-                          lf("span", _hoisted_25$1, eh(fmt(row.left[m.key], m.digits)) + " → " + eh(fmt(row.right[m.key], m.digits)), 1),
+                          lf("span", _hoisted_25$2, eh(fmt(row.left[m.key], m.digits)) + " → " + eh(fmt(row.right[m.key], m.digits)), 1),
                           lf("span", {
                             class: Y(["delta", deltaClass(m, row.delta[m.key])])
                           }, eh(deltaText(m, row.delta[m.key])), 3)
@@ -1034,7 +1057,7 @@ return (_ctx, _cache) => {
                 lf("div", _hoisted_32$1, [
                   lf("h3", _hoisted_33$1, "只在 B 发生（" + eh(data.value.events.right_only.length) + "）", 1),
                   (!data.value.events.right_only.length)
-                    ? (ln(), lo("div", _hoisted_34, "无"))
+                    ? (ln(), lo("div", _hoisted_34$1, "无"))
                     : l_("", true),
                   (ln(true), lo(i8, null, rU(data.value.events.right_only, (e) => {
                     return (ln(), lo("div", {
@@ -1054,7 +1077,316 @@ return (_ctx, _cache) => {
 }
 
 };
-const BranchCompare = /*#__PURE__*/_export_sfc(_sfc_main$1, [['__scopeId',"data-v-c619d7a3"]]);
+const BranchCompare = /*#__PURE__*/_export_sfc(_sfc_main$2, [['__scopeId',"data-v-c619d7a3"]]);
+
+const _hoisted_1$1 = { class: "ai-panel" };
+const _hoisted_2$1 = { class: "ai-head" };
+const _hoisted_3$1 = {
+  key: 0,
+  class: "settings"
+};
+const _hoisted_4$1 = { class: "field" };
+const _hoisted_5$1 = { class: "field" };
+const _hoisted_6$1 = { class: "field wide" };
+const _hoisted_7$1 = { class: "field" };
+const _hoisted_8$1 = { class: "ask" };
+const _hoisted_9$1 = { class: "field wide" };
+const _hoisted_10$1 = { class: "field" };
+const _hoisted_11$1 = ["value"];
+const _hoisted_12$1 = ["disabled"];
+const _hoisted_13$1 = {
+  key: 1,
+  class: "error"
+};
+const _hoisted_14$1 = {
+  key: 2,
+  class: "answer"
+};
+const _hoisted_15$1 = { class: "answer-text" };
+const _hoisted_16$1 = {
+  key: 0,
+  class: "meta"
+};
+const _hoisted_17$1 = { key: 0 };
+const _hoisted_18$1 = { key: 1 };
+const _hoisted_19$1 = {
+  key: 3,
+  class: "citations"
+};
+const _hoisted_20$1 = { class: "c-title" };
+const _hoisted_21$1 = { class: "c-source" };
+const _hoisted_22$1 = { class: "c-tag" };
+const _hoisted_23$1 = {
+  key: 4,
+  class: "material"
+};
+const _hoisted_24$1 = { class: "material-head" };
+const _hoisted_25$1 = {
+  key: 0,
+  class: "material-body"
+};
+
+const KEY_STORAGE = "worldbranch.llm_key";
+const SETTINGS_STORAGE = "worldbranch.llm_settings";
+
+
+const _sfc_main$1 = {
+  __name: 'AiPanel',
+  props: {
+  branchId: { type: Number, default: null },
+  events: { type: Array, default: () => [] },
+},
+  setup(__props) {
+
+const props = __props;
+
+const provider = tA({
+  name: "我的模型",
+  kind: "openai_compatible",
+  base_url: "https://api.deepseek.com/v1",
+  model: "deepseek-chat",
+});
+const apiKey = tA("");
+const showSettings = tA(false);
+const question = tA("");
+const focusEventId = tA(null);
+const answer = tA("");
+const citations = tA([]);
+const meta = tA(null);
+const material = tA("");
+const showMaterial = tA(false);
+const busy = tA(false);
+const error = tA("");
+
+rw(() => {
+  apiKey.value = localStorage.getItem(KEY_STORAGE) || "";
+  const saved = localStorage.getItem(SETTINGS_STORAGE);
+  if (saved) {
+    try {
+      provider.value = { ...provider.value, ...JSON.parse(saved) };
+    } catch (e) {
+      /* 忽略坏数据 */
+    }
+  }
+  if (!apiKey.value) showSettings.value = true;
+});
+
+function saveSettings() {
+  localStorage.setItem(KEY_STORAGE, apiKey.value);
+  localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(provider.value));
+  showSettings.value = false;
+  error.value = "";
+}
+
+async function saveProvider() {
+  try {
+    await api.saveProvider({
+      name: provider.value.name,
+      kind: provider.value.kind,
+      base_url: provider.value.base_url,
+      model: provider.value.model,
+      is_default: true,
+    });
+  } catch (err) {
+    error.value = `保存配置失败：${err.message}`;
+  }
+}
+
+async function run() {
+  if (!props.branchId || busy.value) return;
+  busy.value = true;
+  error.value = "";
+  answer.value = "";
+  citations.value = [];
+  meta.value = null;
+  try {
+    await saveProvider();
+    const result = await api.analyze(
+      props.branchId,
+      question.value,
+      focusEventId.value,
+      apiKey.value
+    );
+    answer.value = result.answer;
+    citations.value = result.citations || [];
+    meta.value = result.context;
+    material.value = result.material_preview || "";
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function previewMaterial() {
+  if (!props.branchId) return;
+  try {
+    const data = await api.material(props.branchId, focusEventId.value);
+    material.value = data.text;
+    citations.value = data.citations || [];
+    showMaterial.value = true;
+  } catch (err) {
+    error.value = err.message;
+  }
+}
+
+const RELIABILITY = {
+  primary: "一手史料",
+  secondary: "研究概述",
+  assumption: "建模假设",
+};
+
+return (_ctx, _cache) => {
+  return (ln(), lo("div", _hoisted_1$1, [
+    lf("div", _hoisted_2$1, [
+      _cache[8] || (_cache[8] = lf("h2", null, "AI 分析", -1)),
+      _cache[9] || (_cache[9] = lf("span", { class: "ai-note" }, "使用你自己的模型与 Key，本服务不保存 Key", -1)),
+      lf("button", {
+        class: "link-btn",
+        onClick: _cache[0] || (_cache[0] = $event => (showSettings.value = !showSettings.value))
+      }, eh(showSettings.value ? "收起设置" : "模型设置"), 1)
+    ]),
+    (showSettings.value)
+      ? (ln(), lo("div", _hoisted_3$1, [
+          lf("div", _hoisted_4$1, [
+            _cache[10] || (_cache[10] = lf("label", null, "接口地址", -1)),
+            nf(lf("input", {
+              "onUpdate:modelValue": _cache[1] || (_cache[1] = $event => ((provider.value.base_url) = $event)),
+              placeholder: "https://api.deepseek.com/v1"
+            }, null, 512), [
+              [oe, provider.value.base_url]
+            ])
+          ]),
+          lf("div", _hoisted_5$1, [
+            _cache[11] || (_cache[11] = lf("label", null, "模型名", -1)),
+            nf(lf("input", {
+              "onUpdate:modelValue": _cache[2] || (_cache[2] = $event => ((provider.value.model) = $event)),
+              placeholder: "deepseek-chat"
+            }, null, 512), [
+              [oe, provider.value.model]
+            ])
+          ]),
+          lf("div", _hoisted_6$1, [
+            _cache[12] || (_cache[12] = lf("label", null, "API Key（只存在你的浏览器里）", -1)),
+            nf(lf("input", {
+              "onUpdate:modelValue": _cache[3] || (_cache[3] = $event => ((apiKey).value = $event)),
+              type: "password",
+              placeholder: "sk-...",
+              autocomplete: "off"
+            }, null, 512), [
+              [oe, apiKey.value]
+            ])
+          ]),
+          lf("div", _hoisted_7$1, [
+            _cache[14] || (_cache[14] = lf("label", null, "适配器", -1)),
+            nf(lf("select", {
+              "onUpdate:modelValue": _cache[4] || (_cache[4] = $event => ((provider.value.kind) = $event))
+            }, [...(_cache[13] || (_cache[13] = [
+              lf("option", { value: "openai_compatible" }, "OpenAI 兼容", -1),
+              lf("option", { value: "mock" }, "离线模拟（不调用模型）", -1)
+            ]))], 512), [
+              [oi, provider.value.kind]
+            ])
+          ]),
+          lf("button", {
+            class: "primary",
+            onClick: saveSettings
+          }, "保存到本地")
+        ]))
+      : l_("", true),
+    lf("div", _hoisted_8$1, [
+      lf("div", _hoisted_9$1, [
+        _cache[15] || (_cache[15] = lf("label", null, "你的问题", -1)),
+        nf(lf("input", {
+          "onUpdate:modelValue": _cache[5] || (_cache[5] = $event => ((question).value = $event)),
+          placeholder: "例如：河北的粮荒是如何影响到其他道的？",
+          onKeyup: og(run, ["enter"])
+        }, null, 544), [
+          [oe, question.value]
+        ])
+      ]),
+      lf("div", _hoisted_10$1, [
+        _cache[17] || (_cache[17] = lf("label", null, "可选的焦点事件", -1)),
+        nf(lf("select", {
+          "onUpdate:modelValue": _cache[6] || (_cache[6] = $event => ((focusEventId).value = $event))
+        }, [
+          _cache[16] || (_cache[16] = lf("option", { value: null }, "不指定", -1)),
+          (ln(true), lo(i8, null, rU(__props.events.slice(0, 40), (e) => {
+            return (ln(), lo("option", {
+              key: e.id,
+              value: e.id
+            }, eh(e.game_date) + " " + eh(e.title), 9, _hoisted_11$1))
+          }), 128))
+        ], 512), [
+          [oi, focusEventId.value]
+        ])
+      ]),
+      lf("button", {
+        class: "primary",
+        disabled: busy.value,
+        onClick: run
+      }, eh(busy.value ? "分析中…" : "开始分析"), 9, _hoisted_12$1),
+      lf("button", {
+        class: "ghost",
+        onClick: previewMaterial
+      }, "先看材料")
+    ]),
+    (error.value)
+      ? (ln(), lo("div", _hoisted_13$1, eh(error.value), 1))
+      : l_("", true),
+    (answer.value)
+      ? (ln(), lo("div", _hoisted_14$1, [
+          _cache[18] || (_cache[18] = lf("div", { class: "answer-title" }, "分析结果", -1)),
+          lf("p", _hoisted_15$1, eh(answer.value), 1),
+          (meta.value)
+            ? (ln(), lo("div", _hoisted_16$1, [
+                lf("span", null, "材料：" + eh(meta.value.region_count) + " 个道 · " + eh(meta.value.event_count) + " 条事件", 1),
+                (meta.value.focus_event)
+                  ? (ln(), lo("span", _hoisted_17$1, "· 焦点：" + eh(meta.value.focus_event), 1))
+                  : l_("", true),
+                (meta.value.cause_chain_length)
+                  ? (ln(), lo("span", _hoisted_18$1, "· 因果链 " + eh(meta.value.cause_chain_length) + " 节", 1))
+                  : l_("", true),
+                lf("span", null, "· 引用资料 " + eh(meta.value.knowledge_hits) + " 条", 1)
+              ]))
+            : l_("", true)
+        ]))
+      : l_("", true),
+    (citations.value.length)
+      ? (ln(), lo("div", _hoisted_19$1, [
+          _cache[19] || (_cache[19] = lf("div", { class: "citations-title" }, "引用资料", -1)),
+          (ln(true), lo(i8, null, rU(citations.value, (c) => {
+            return (ln(), lo("div", {
+              key: c.title,
+              class: "citation"
+            }, [
+              lf("span", _hoisted_20$1, eh(c.title), 1),
+              lf("span", _hoisted_21$1, eh(c.source), 1),
+              lf("span", _hoisted_22$1, eh(RELIABILITY[c.reliability] || c.reliability), 1)
+            ]))
+          }), 128))
+        ]))
+      : l_("", true),
+    (material.value)
+      ? (ln(), lo("div", _hoisted_23$1, [
+          lf("div", _hoisted_24$1, [
+            _cache[20] || (_cache[20] = lf("span", null, "送给模型的材料", -1)),
+            lf("button", {
+              class: "link-btn",
+              onClick: _cache[7] || (_cache[7] = $event => (showMaterial.value = !showMaterial.value))
+            }, eh(showMaterial.value ? "收起" : "展开"), 1)
+          ]),
+          (showMaterial.value)
+            ? (ln(), lo("pre", _hoisted_25$1, eh(material.value), 1))
+            : l_("", true)
+        ]))
+      : l_("", true)
+  ]))
+}
+}
+
+};
+const AiPanel = /*#__PURE__*/_export_sfc(_sfc_main$1, [['__scopeId',"data-v-4bc9921a"]]);
 
 const _hoisted_1 = { class: "topbar" };
 const _hoisted_2 = {
@@ -1071,45 +1403,49 @@ const _hoisted_7 = {
 };
 const _hoisted_8 = {
   key: 1,
+  class: "compare-main"
+};
+const _hoisted_9 = {
+  key: 2,
   class: "layout"
 };
-const _hoisted_9 = { class: "map-panel" };
-const _hoisted_10 = { class: "map-toolbar" };
-const _hoisted_11 = { class: "scale-group" };
-const _hoisted_12 = ["value"];
-const _hoisted_13 = {
+const _hoisted_10 = { class: "map-panel" };
+const _hoisted_11 = { class: "map-toolbar" };
+const _hoisted_12 = { class: "scale-group" };
+const _hoisted_13 = ["value"];
+const _hoisted_14 = {
   key: 0,
   class: "auto-hint"
 };
-const _hoisted_14 = {
+const _hoisted_15 = {
   key: 1,
   class: "auto-hint"
 };
-const _hoisted_15 = { class: "side-panel" };
-const _hoisted_16 = { class: "panel-block" };
-const _hoisted_17 = { class: "precision-grid" };
-const _hoisted_18 = ["onClick"];
-const _hoisted_19 = { class: "advance-row" };
-const _hoisted_20 = ["disabled"];
+const _hoisted_16 = { class: "side-panel" };
+const _hoisted_17 = { class: "panel-block" };
+const _hoisted_18 = { class: "precision-grid" };
+const _hoisted_19 = ["onClick"];
+const _hoisted_20 = { class: "advance-row" };
 const _hoisted_21 = ["disabled"];
 const _hoisted_22 = ["disabled"];
-const _hoisted_23 = { class: "hint" };
-const _hoisted_24 = {
+const _hoisted_23 = ["disabled"];
+const _hoisted_24 = { class: "hint" };
+const _hoisted_25 = {
   key: 0,
   class: "hint error"
 };
-const _hoisted_25 = { class: "panel-block" };
-const _hoisted_26 = {
+const _hoisted_26 = { class: "panel-block" };
+const _hoisted_27 = {
   key: 0,
   class: "unit-list"
 };
-const _hoisted_27 = { class: "unit-name" };
-const _hoisted_28 = { class: "unit-meta" };
-const _hoisted_29 = { class: "unit-row" };
+const _hoisted_28 = { class: "unit-name" };
+const _hoisted_29 = { class: "unit-meta" };
 const _hoisted_30 = { class: "unit-row" };
-const _hoisted_31 = { key: 0 };
-const _hoisted_32 = { class: "panel-block grow" };
-const _hoisted_33 = { class: "count" };
+const _hoisted_31 = { class: "unit-row" };
+const _hoisted_32 = { key: 0 };
+const _hoisted_33 = { class: "panel-block grow" };
+const _hoisted_34 = { class: "count" };
 
 const WORLD = "tang_750";
 
@@ -1261,7 +1597,7 @@ rw(boot);
 return (_ctx, _cache) => {
   return (ln(), lo(i8, null, [
     lf("header", _hoisted_1, [
-      _cache[11] || (_cache[11] = lf("div", { class: "brand" }, [
+      _cache[12] || (_cache[12] = lf("div", { class: "brand" }, [
         lf("span", { class: "brand-mark" }, "WB"),
         lf("div", null, [
           lf("h1", null, "WorldBranch"),
@@ -1278,22 +1614,26 @@ return (_ctx, _cache) => {
               lf("button", {
                 class: Y({ active: view.value === 'compare' }),
                 onClick: _cache[1] || (_cache[1] = $event => (view.value = 'compare'))
-              }, "分支对比", 2)
+              }, "分支对比", 2),
+              lf("button", {
+                class: Y({ active: view.value === 'ai' }),
+                onClick: _cache[2] || (_cache[2] = $event => (view.value = 'ai'))
+              }, "AI 分析", 2)
             ]),
             lf("span", _hoisted_4, [
-              _cache[6] || (_cache[6] = lv("时间 ", -1)),
+              _cache[7] || (_cache[7] = lv("时间 ", -1)),
               lf("b", null, eh(branch.value.current_date), 1)
             ]),
             lf("span", _hoisted_5, [
-              _cache[7] || (_cache[7] = lv("精度 ", -1)),
+              _cache[8] || (_cache[8] = lv("精度 ", -1)),
               lf("b", null, eh(PRECISIONS.find((p) => p.key === branch.value.precision)?.name), 1)
             ]),
             lf("span", _hoisted_6, [
-              _cache[8] || (_cache[8] = lv("已推进 ", -1)),
+              _cache[9] || (_cache[9] = lv("已推进 ", -1)),
               lf("b", null, eh(branch.value.tick_index), 1),
-              _cache[9] || (_cache[9] = lv(" 月", -1))
+              _cache[10] || (_cache[10] = lv(" 月", -1))
             ]),
-            _cache[10] || (_cache[10] = lf("a", {
+            _cache[11] || (_cache[11] = lf("a", {
               class: "chip link",
               href: "/legacy"
             }, "旧版界面", -1))
@@ -1307,137 +1647,144 @@ return (_ctx, _cache) => {
             "current-branch-id": branch.value ? branch.value.id : null
           }, null, 8, ["current-branch-id"])
         ]))
-      : (ln(), lo("main", _hoisted_8, [
-          lf("section", _hoisted_9, [
-            lf("div", _hoisted_10, [
+      : (view.value === 'ai')
+        ? (ln(), lo("main", _hoisted_8, [
+            lg(AiPanel, {
+              "branch-id": branch.value ? branch.value.id : null,
+              events: events.value
+            }, null, 8, ["branch-id", "events"])
+          ]))
+        : (ln(), lo("main", _hoisted_9, [
+            lf("section", _hoisted_10, [
               lf("div", _hoisted_11, [
-                _cache[14] || (_cache[14] = lf("label", { for: "scope" }, "观察尺度", -1)),
-                lf("select", {
-                  id: "scope",
-                  value: scope.value,
-                  onChange: _cache[2] || (_cache[2] = $event => (onScopeSelect($event.target.value)))
-                }, [...(_cache[12] || (_cache[12] = [
-                  lf("option", { value: "world" }, "世界级", -1),
-                  lf("option", { value: "nation" }, "国家级", -1),
-                  lf("option", { value: "region" }, "地区级", -1),
-                  lf("option", { value: "local" }, "局部级", -1)
-                ]))], 40, _hoisted_12),
-                (manualScope.value)
-                  ? (ln(), lo("span", _hoisted_13, [
-                      _cache[13] || (_cache[13] = lv(" 手动模式 ", -1)),
-                      lf("button", {
-                        class: "link-btn",
-                        onClick: backToAuto
-                      }, "恢复自动")
-                    ]))
-                  : (ln(), lo("span", _hoisted_14, "跟随缩放自动切换"))
-              ]),
-              _cache[15] || (_cache[15] = lf("div", { class: "legend" }, [
-                lf("span", null, [
-                  lf("i", { style: {"background":"#5a7a96"} }),
-                  lv("道界")
-                ]),
-                lf("span", null, [
-                  lf("i", { style: {"background":"rgba(214,62,42,.25)"} }),
-                  lv("粮价偏高")
-                ]),
-                lf("span", null, [
-                  lf("i", { style: {"background":"rgba(214,62,42,.62)"} }),
-                  lv("严重缺粮")
-                ])
-              ], -1))
-            ]),
-            lg(MapView, {
-              regions: regions.value,
-              selected: selected.value,
-              scale: scope.value,
-              factions: factions.value,
-              onSelect: selectRegion,
-              onZoomChange: onZoomChange
-            }, null, 8, ["regions", "selected", "scale", "factions"])
-          ]),
-          lf("aside", _hoisted_15, [
-            lf("div", _hoisted_16, [
-              _cache[16] || (_cache[16] = lf("h2", null, "模拟控制", -1)),
-              lf("div", _hoisted_17, [
-                (ln(), lo(i8, null, rU(PRECISIONS, (p) => {
-                  return lf("button", {
-                    key: p.key,
-                    class: Y({ active: precision.value === p.key }),
-                    onClick: $event => (setPrecision(p.key))
-                  }, [
-                    lf("b", null, eh(p.name), 1),
-                    lf("span", null, eh(p.desc), 1)
-                  ], 10, _hoisted_18)
-                }), 64))
-              ]),
-              lf("div", _hoisted_19, [
-                lf("button", {
-                  class: "advance",
-                  disabled: busy.value,
-                  onClick: _cache[3] || (_cache[3] = $event => (advance(1)))
-                }, "推进 1 月", 8, _hoisted_20),
-                lf("button", {
-                  class: "advance",
-                  disabled: busy.value,
-                  onClick: _cache[4] || (_cache[4] = $event => (advance(3)))
-                }, "推进 3 月", 8, _hoisted_21),
-                lf("button", {
-                  class: "advance",
-                  disabled: busy.value,
-                  onClick: _cache[5] || (_cache[5] = $event => (advance(12)))
-                }, "推进 12 月", 8, _hoisted_22)
-              ]),
-              lf("p", _hoisted_23, eh(message.value), 1),
-              (error.value)
-                ? (ln(), lo("p", _hoisted_24, eh(error.value), 1))
-                : l_("", true)
-            ]),
-            lf("div", _hoisted_25, [
-              lf("h2", null, eh(macro.value ? "势力概览" : "地区详情"), 1),
-              (macro.value)
-                ? (ln(), lo("div", _hoisted_26, [
-                    (ln(true), lo(i8, null, rU(units.value, (u) => {
-                      return (ln(), lo("div", {
-                        key: u.key,
-                        class: "unit"
-                      }, [
-                        lf("div", _hoisted_27, eh(u.name), 1),
-                        lf("div", _hoisted_28, eh(u.metrics.region_count) + " 道 · 人口 " + eh(Math.round(u.metrics.population).toLocaleString()), 1),
-                        lf("div", _hoisted_29, [
-                          lf("span", null, "存粮 " + eh(Math.round(u.metrics.grain_stock).toLocaleString()) + " 石", 1),
-                          lf("span", null, "粮价 " + eh(u.metrics.price_index.toFixed(2)), 1)
-                        ]),
-                        lf("div", _hoisted_30, [
-                          lf("span", null, "民变峰值 " + eh(u.metrics.unrest_max.toFixed(2)), 1),
-                          (u.metrics.treasury != null)
-                            ? (ln(), lo("span", _hoisted_31, "府库 " + eh(Math.round(u.metrics.treasury).toLocaleString()), 1))
-                            : l_("", true)
-                        ])
+                lf("div", _hoisted_12, [
+                  _cache[15] || (_cache[15] = lf("label", { for: "scope" }, "观察尺度", -1)),
+                  lf("select", {
+                    id: "scope",
+                    value: scope.value,
+                    onChange: _cache[3] || (_cache[3] = $event => (onScopeSelect($event.target.value)))
+                  }, [...(_cache[13] || (_cache[13] = [
+                    lf("option", { value: "world" }, "世界级", -1),
+                    lf("option", { value: "nation" }, "国家级", -1),
+                    lf("option", { value: "region" }, "地区级", -1),
+                    lf("option", { value: "local" }, "局部级", -1)
+                  ]))], 40, _hoisted_13),
+                  (manualScope.value)
+                    ? (ln(), lo("span", _hoisted_14, [
+                        _cache[14] || (_cache[14] = lv(" 手动模式 ", -1)),
+                        lf("button", {
+                          class: "link-btn",
+                          onClick: backToAuto
+                        }, "恢复自动")
                       ]))
-                    }), 128)),
-                    _cache[17] || (_cache[17] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
-                  ]))
-                : (ln(), la(RegionDetail, {
-                    key: 1,
-                    region: region.value,
-                    onAct: onAct
-                  }, null, 8, ["region"]))
-            ]),
-            lf("div", _hoisted_32, [
-              lf("h2", null, [
-                _cache[18] || (_cache[18] = lv("事件流 ", -1)),
-                lf("span", _hoisted_33, eh(events.value.length), 1)
+                    : (ln(), lo("span", _hoisted_15, "跟随缩放自动切换"))
+                ]),
+                _cache[16] || (_cache[16] = lf("div", { class: "legend" }, [
+                  lf("span", null, [
+                    lf("i", { style: {"background":"#5a7a96"} }),
+                    lv("道界")
+                  ]),
+                  lf("span", null, [
+                    lf("i", { style: {"background":"rgba(214,62,42,.25)"} }),
+                    lv("粮价偏高")
+                  ]),
+                  lf("span", null, [
+                    lf("i", { style: {"background":"rgba(214,62,42,.62)"} }),
+                    lv("严重缺粮")
+                  ])
+                ], -1))
               ]),
-              lg(EventFeed, {
-                "branch-id": branch.value ? branch.value.id : null,
-                events: events.value,
-                scope: scope.value,
-                onSelectRegion: selectRegion
-              }, null, 8, ["branch-id", "events", "scope"])
+              lg(MapView, {
+                regions: regions.value,
+                selected: selected.value,
+                scale: scope.value,
+                factions: factions.value,
+                onSelect: selectRegion,
+                onZoomChange: onZoomChange
+              }, null, 8, ["regions", "selected", "scale", "factions"])
+            ]),
+            lf("aside", _hoisted_16, [
+              lf("div", _hoisted_17, [
+                _cache[17] || (_cache[17] = lf("h2", null, "模拟控制", -1)),
+                lf("div", _hoisted_18, [
+                  (ln(), lo(i8, null, rU(PRECISIONS, (p) => {
+                    return lf("button", {
+                      key: p.key,
+                      class: Y({ active: precision.value === p.key }),
+                      onClick: $event => (setPrecision(p.key))
+                    }, [
+                      lf("b", null, eh(p.name), 1),
+                      lf("span", null, eh(p.desc), 1)
+                    ], 10, _hoisted_19)
+                  }), 64))
+                ]),
+                lf("div", _hoisted_20, [
+                  lf("button", {
+                    class: "advance",
+                    disabled: busy.value,
+                    onClick: _cache[4] || (_cache[4] = $event => (advance(1)))
+                  }, "推进 1 月", 8, _hoisted_21),
+                  lf("button", {
+                    class: "advance",
+                    disabled: busy.value,
+                    onClick: _cache[5] || (_cache[5] = $event => (advance(3)))
+                  }, "推进 3 月", 8, _hoisted_22),
+                  lf("button", {
+                    class: "advance",
+                    disabled: busy.value,
+                    onClick: _cache[6] || (_cache[6] = $event => (advance(12)))
+                  }, "推进 12 月", 8, _hoisted_23)
+                ]),
+                lf("p", _hoisted_24, eh(message.value), 1),
+                (error.value)
+                  ? (ln(), lo("p", _hoisted_25, eh(error.value), 1))
+                  : l_("", true)
+              ]),
+              lf("div", _hoisted_26, [
+                lf("h2", null, eh(macro.value ? "势力概览" : "地区详情"), 1),
+                (macro.value)
+                  ? (ln(), lo("div", _hoisted_27, [
+                      (ln(true), lo(i8, null, rU(units.value, (u) => {
+                        return (ln(), lo("div", {
+                          key: u.key,
+                          class: "unit"
+                        }, [
+                          lf("div", _hoisted_28, eh(u.name), 1),
+                          lf("div", _hoisted_29, eh(u.metrics.region_count) + " 道 · 人口 " + eh(Math.round(u.metrics.population).toLocaleString()), 1),
+                          lf("div", _hoisted_30, [
+                            lf("span", null, "存粮 " + eh(Math.round(u.metrics.grain_stock).toLocaleString()) + " 石", 1),
+                            lf("span", null, "粮价 " + eh(u.metrics.price_index.toFixed(2)), 1)
+                          ]),
+                          lf("div", _hoisted_31, [
+                            lf("span", null, "民变峰值 " + eh(u.metrics.unrest_max.toFixed(2)), 1),
+                            (u.metrics.treasury != null)
+                              ? (ln(), lo("span", _hoisted_32, "府库 " + eh(Math.round(u.metrics.treasury).toLocaleString()), 1))
+                              : l_("", true)
+                          ])
+                        ]))
+                      }), 128)),
+                      _cache[18] || (_cache[18] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
+                    ]))
+                  : (ln(), la(RegionDetail, {
+                      key: 1,
+                      region: region.value,
+                      onAct: onAct
+                    }, null, 8, ["region"]))
+              ]),
+              lf("div", _hoisted_33, [
+                lf("h2", null, [
+                  _cache[19] || (_cache[19] = lv("事件流 ", -1)),
+                  lf("span", _hoisted_34, eh(events.value.length), 1)
+                ]),
+                lg(EventFeed, {
+                  "branch-id": branch.value ? branch.value.id : null,
+                  events: events.value,
+                  scope: scope.value,
+                  onSelectRegion: selectRegion
+                }, null, 8, ["branch-id", "events", "scope"])
+              ])
             ])
-          ])
-        ]))
+          ]))
   ], 64))
 }
 }

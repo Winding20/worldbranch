@@ -5,6 +5,7 @@ import MapView from "./components/MapView.vue";
 import EventFeed from "./components/EventFeed.vue";
 import RegionDetail from "./components/RegionDetail.vue";
 import BranchCompare from "./components/BranchCompare.vue";
+import AiPanel from "./components/AiPanel.vue";
 
 const WORLD = "tang_750";
 const PRECISIONS = [
@@ -162,6 +163,7 @@ onMounted(boot);
       <nav class="view-tabs">
         <button :class="{ active: view === 'sim' }" @click="view = 'sim'">推演</button>
         <button :class="{ active: view === 'compare' }" @click="view = 'compare'">分支对比</button>
+        <button :class="{ active: view === 'ai' }" @click="view = 'ai'">AI 分析</button>
       </nav>
       <span class="chip">时间 <b>{{ branch.current_date }}</b></span>
       <span class="chip">精度 <b>{{ PRECISIONS.find((p) => p.key === branch.precision)?.name }}</b></span>
@@ -172,6 +174,10 @@ onMounted(boot);
 
   <main v-if="view === 'compare'" class="compare-main">
     <BranchCompare :world="WORLD" :current-branch-id="branch ? branch.id : null" />
+  </main>
+
+  <main v-else-if="view === 'ai'" class="compare-main">
+    <AiPanel :branch-id="branch ? branch.id : null" :events="events" />
   </main>
 
   <main v-else class="layout">

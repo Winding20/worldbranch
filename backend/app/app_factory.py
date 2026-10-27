@@ -79,6 +79,17 @@ def create_app(overrides: dict | None = None) -> Flask:
     def handle_value(err):
         return jsonify({"error": str(err)}), 400
 
+    from .ai import LLMError, ProviderNotConfigured
+
+    @app.errorhandler(ProviderNotConfigured)
+    def handle_no_provider(err):
+        return jsonify({"error": str(err)}), 400
+
+    @app.errorhandler(LLMError)
+    def handle_llm_error(err):
+        # 错误信息里绝不会出现 API Key
+        return jsonify({"error": str(err)}), 502
+
     from .cli import register_cli
 
     register_cli(app)

@@ -228,6 +228,79 @@
 }
 .empty.error[data-v-c619d7a3] { color: #d8614a;
 }
+
+.ai-panel[data-v-4bc9921a] { padding: 16px 20px; max-width: 980px; margin: 0 auto; height: 100%; overflow: auto;
+}
+.ai-head[data-v-4bc9921a] { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+}
+.ai-head h2[data-v-4bc9921a] { font-size: 15px; margin: 0;
+}
+.ai-note[data-v-4bc9921a] { font-size: 11px; color: #8fa1b0;
+}
+.link-btn[data-v-4bc9921a] { background: none; border: none; color: #4aa8d8; cursor: pointer; font-size: 11px; margin-left: auto;
+}
+.settings[data-v-4bc9921a], .ask[data-v-4bc9921a] {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+  background: #161d24; border: 1px solid #2a3540; border-radius: 10px;
+  padding: 12px; margin-bottom: 12px;
+}
+.field[data-v-4bc9921a] { display: flex; flex-direction: column; gap: 4px; min-width: 180px;
+}
+.field.wide[data-v-4bc9921a] { flex: 1; min-width: 280px;
+}
+.field label[data-v-4bc9921a] { font-size: 11px; color: #8fa1b0;
+}
+.field input[data-v-4bc9921a], .field select[data-v-4bc9921a] {
+  background: #1d262f; color: #dfe7ee; border: 1px solid #2a3540;
+  border-radius: 7px; padding: 7px 10px; font-size: 12px; outline: none;
+}
+.field input[data-v-4bc9921a]:focus, .field select[data-v-4bc9921a]:focus { border-color: #4aa8d8;
+}
+.primary[data-v-4bc9921a] {
+  padding: 8px 18px; border-radius: 8px; border: 1px solid #4aa8d8;
+  background: rgba(74, 168, 216, 0.16); color: #4aa8d8; cursor: pointer; font-size: 12px;
+}
+.primary[data-v-4bc9921a]:disabled { opacity: 0.5; cursor: progress;
+}
+.ghost[data-v-4bc9921a] {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid #2a3540;
+  background: transparent; color: #8fa1b0; cursor: pointer; font-size: 12px;
+}
+.ghost[data-v-4bc9921a]:hover { color: #4aa8d8; border-color: #4aa8d8;
+}
+.error[data-v-4bc9921a] { color: #d8614a; font-size: 12px; margin-bottom: 10px;
+}
+.answer[data-v-4bc9921a] { background: #161d24; border: 1px solid #2a3540; border-radius: 10px; padding: 14px; margin-bottom: 12px;
+}
+.answer-title[data-v-4bc9921a] { font-size: 12px; color: #d8a24a; margin-bottom: 8px;
+}
+.answer-text[data-v-4bc9921a] { margin: 0; font-size: 13px; line-height: 1.75; white-space: pre-wrap;
+}
+.meta[data-v-4bc9921a] { margin-top: 10px; font-size: 10.5px; color: #8fa1b0; display: flex; gap: 6px; flex-wrap: wrap;
+}
+.citations[data-v-4bc9921a] { margin-bottom: 12px;
+}
+.citations-title[data-v-4bc9921a] { font-size: 11px; color: #8fa1b0; margin-bottom: 6px;
+}
+.citation[data-v-4bc9921a] { display: flex; gap: 10px; font-size: 11.5px; padding: 4px 0; border-bottom: 1px dashed rgba(42,53,64,.6);
+}
+.c-title[data-v-4bc9921a] { color: #dfe7ee;
+}
+.c-source[data-v-4bc9921a] { color: #8fa1b0;
+}
+.c-tag[data-v-4bc9921a] {
+  margin-left: auto; font-size: 10px; padding: 1px 7px; border-radius: 5px;
+  background: rgba(216,162,74,.15); color: #d8a24a;
+}
+.material[data-v-4bc9921a] { background: #10161c; border: 1px solid #2a3540; border-radius: 10px; padding: 10px 12px;
+}
+.material-head[data-v-4bc9921a] { display: flex; align-items: center; font-size: 11px; color: #8fa1b0;
+}
+.material-body[data-v-4bc9921a] {
+  margin: 8px 0 0; font-size: 11px; line-height: 1.7; color: #c6d6e2;
+  white-space: pre-wrap; max-height: 340px; overflow: auto;
+  font-family: "Consolas", "Microsoft YaHei", monospace;
+}
 :root {
   --bg: #0f1419;
   --panel: #161d24;

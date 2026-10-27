@@ -173,4 +173,36 @@ if (errors.length) {
   console.log("\n捕获到的错误：");
   errors.slice(0, 5).forEach((e) => console.log("  -", e));
 }
+// ---- AI 分析视图 ----
+console.log("\n【AI 分析视图】");
+const aiTab = [...window.document.querySelectorAll(".view-tabs button")].find(
+  (b) => b.textContent.trim() === "AI 分析"
+);
+if (aiTab) aiTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+const aiDeadline = Date.now() + 12000;
+let aiText = "";
+while (Date.now() < aiDeadline) {
+  await wait(400);
+  const root = window.document.querySelector(".ai-panel");
+  aiText = root ? root.textContent : "";
+  if (aiText.includes("AI 分析")) break;
+}
+
+const aiChecks = {
+  "AI 面板已渲染": !!window.document.querySelector(".ai-panel"),
+  "有模型设置入口": /模型设置|收起设置/.test(aiText),
+  "有提问输入框": window.document.querySelectorAll(".ai-panel input").length >= 1,
+  "有材料预览入口": /先看材料/.test(aiText),
+  "AI 视图无运行时错误": errors.length === 0,
+};
+
+for (const [name, ok] of Object.entries(aiChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${name}`);
+  if (!ok) failed += 1;
+}
+if (errors.length) {
+  console.log("\n捕获到的错误：");
+  errors.slice(0, 5).forEach((e) => console.log("  -", e));
+}
 process.exit(failed === 0 ? 0 : 1);

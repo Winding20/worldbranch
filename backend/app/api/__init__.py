@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from flask import Blueprint, Flask
 
-from . import branches, worlds
+from . import ai, branches, worlds
 
-BLUEPRINTS: tuple[Blueprint, ...] = (worlds.bp, branches.bp)
+BLUEPRINTS: tuple[Blueprint, ...] = (worlds.bp, branches.bp, ai.bp)
 
 
 def register_blueprints(app: Flask) -> None:

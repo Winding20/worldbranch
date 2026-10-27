@@ -323,3 +323,100 @@ class Snapshot(Base):
     __table_args__ = (
         UniqueConstraint("branch_id", "tick_index", name="uq_snapshot_branch_tick"),
     )
+
+
+# --------------------------------------------------------------------------- #
+# 知识库
+# --------------------------------------------------------------------------- #
+class KnowledgeDoc(Base):
+    """一篇世界资料（文献摘录、设定文档等）。
+
+    设计文档要求：资料必须记录来源与可信度，AI 才能区分「史实」「估算」「假设」。
+    """
+
+    __tablename__ = "knowledge_docs"
+    __table_args__ = (UniqueConstraint("world_id", "slug", name="uq_knowledge_slug"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    slug: Mapped[str] = mapped_column(String(96), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    #: 来源说明，例如《新唐书·食货志》
+    source: Mapped[str] = mapped_column(String(200), default="")
+    #: 可信度：primary（一手/正史）/ secondary（研究）/ assumption（设定假设）
+    reliability: Mapped[str] = mapped_column(String(16), default="secondary")
+    content: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    chunks: Mapped[list["KnowledgeChunk"]] = relationship(
+        back_populates="doc", cascade="all, delete-orphan"
+    )
+
+    def to_dict(self, *, with_content: bool = False) -> dict[str, Any]:
+        data = {
+            "id": self.id,
+            "slug": self.slug,
+            "title": self.title,
+            "source": self.source,
+            "reliability": self.reliability,
+            "chunk_count": len(self.chunks),
+        }
+        if with_content:
+            data["content"] = self.content
+        return data
+
+
+class KnowledgeChunk(Base):
+    """资料切片，检索的最小单位。
+
+    第一版不引入向量库：按字符二元组做重排，规模在几千条以内足够用；
+    真到了需要语义检索的量级再换（设计文档第 9 章：按数据规模再选方案）。
+    """
+
+    __tablename__ = "knowledge_chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    doc_id: Mapped[int] = mapped_column(
+        ForeignKey("knowledge_docs.id", ondelete="CASCADE"), index=True
+    )
+    seq: Mapped[int] = mapped_column(Integer, default=0)
+    text: Mapped[str] = mapped_column(Text)
+
+    doc: Mapped[KnowledgeDoc] = relationship(back_populates="chunks")
+
+
+# --------------------------------------------------------------------------- #
+# 模型服务配置（BYOK）
+# --------------------------------------------------------------------------- #
+class LlmProvider(Base):
+    """用户配置的模型服务。
+
+    **不存 API Key**：Key 由浏览器本地保存、随请求头传入，服务端用完即弃。
+    这样即使数据库泄露也不会带走用户的额度。
+    """
+
+    __tablename__ = "llm_providers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(96), unique=True)
+    #: openai_compatible / anthropic / gemini / mock
+    kind: Mapped[str] = mapped_column(String(32), default="openai_compatible")
+    base_url: Mapped[str] = mapped_column(String(300), default="")
+    model: Mapped[str] = mapped_column(String(128), default="")
+    enabled: Mapped[bool] = mapped_column(default=True)
+    #: 是否为默认 Provider
+    is_default: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "kind": self.kind,
+            "base_url": self.base_url,
+            "model": self.model,
+            "enabled": self.enabled,
+            "is_default": self.is_default,
+            # 永远不返回 key，连脱敏后的也不返回
+            "has_key": False,
+        }

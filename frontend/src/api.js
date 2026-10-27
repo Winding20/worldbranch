@@ -49,4 +49,27 @@ export const api = {
   snapshots: (id) => request(`/api/branches/${id}/snapshots?limit=120`),
   compare: (left, right) =>
     request(`/api/branches/compare?left=${left}&right=${right}`),
+
+  // ---- AI ----
+  providers: () => request("/api/ai/providers"),
+  saveProvider: (payload) =>
+    request("/api/ai/providers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  analyze: (branchId, question, eventId, apiKey) =>
+    request(`/api/ai/branches/${branchId}/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Key 只随这一次请求走，服务端用完即弃
+        "X-LLM-Key": apiKey || "",
+      },
+      body: JSON.stringify({ question, event_id: eventId }),
+    }),
+  material: (branchId, eventId) =>
+    request(
+      `/api/ai/branches/${branchId}/material` + (eventId ? `?event_id=${eventId}` : "")
+    ),
+  knowledge: (world) => request(`/api/ai/worlds/${world}/knowledge`),
 };

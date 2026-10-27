@@ -1,4 +1,4 @@
-"""内置世界的数据包。"""
+﻿"""内置世界的数据包。"""
 
 from __future__ import annotations
 
@@ -38,4 +38,24 @@ def seed_tang(session: Session) -> World:
     return world
 
 
-__all__ = ["WORLD_SEEDERS", "seed_all", "seed_tang", "tang_750", "Faction", "Region", "World", "dt"]
+def seed_knowledge(session: Session) -> int:
+    """为内置世界写入知识库资料（幂等）。"""
+    world = session.scalar(select(World).where(World.key == tang_750.WORLD_KEY))
+    if world is None:
+        raise LookupError("请先执行 seed 写入世界")
+    count = tang_750.seed_knowledge(session, world)
+    session.flush()
+    return count
+
+
+__all__ = [
+    "WORLD_SEEDERS",
+    "seed_all",
+    "seed_knowledge",
+    "seed_tang",
+    "tang_750",
+    "Faction",
+    "Region",
+    "World",
+    "dt",
+]

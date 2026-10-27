@@ -1,4 +1,4 @@
-﻿"""命令行工具：建表、灌入内置世界、推进与查看。
+"""命令行工具：建表、灌入内置世界、推进与查看。
 
 用法（先激活环境：. tools/dev-env.ps1）::
 
@@ -40,10 +40,15 @@ def register_cli(app: Flask) -> None:
     @app.cli.command("seed")
     def seed() -> None:
         """写入内置世界（幂等）。"""
+        from .seed import seed_knowledge as seed_kb
+
         with get_db().session() as session:
             worlds = seed_all(session)
             for w in worlds:
                 click.echo(f"世界 {w.key} - {w.name}（{len(w.regions)} 地区）")
+        with get_db().session() as session:
+            count = seed_kb(session)
+            click.echo(f"知识库资料 {count} 篇")
 
     @app.cli.command("new-branch")
     @click.argument("world_key")
