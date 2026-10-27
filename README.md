@@ -14,19 +14,43 @@
 新项目开发/
 ├─ backend/                  Flask + SQLAlchemy 后端
 │  ├─ app/
-│  │  ├─ models.py           世界模板 / 分支 / 地区状态 / 事件 / 快照
-│  │  ├─ services.py         建分支、派生分支、几何与势力元数据
+│  │  ├─ models.py           世界模板 / 分支 / 地区状态 / 事件 / 快照 / 转运通道
+│  │  ├─ services.py         建分支、派生、干预、因果链
 │  │  ├─ api/                worlds、branches 两个蓝图
 │  │  ├─ engine/
 │  │  │  ├─ rules.py         纯函数规则层（可单测，不碰数据库）
-│  │  │  └─ simulation.py    时间推进、事件生成、快照
-│  │  ├─ seed/tang_750.py    唐朝天宝九年内置世界（7 道、2 势力）
+│  │  │  └─ simulation.py    时间推进、调运传导、事件生成、快照
+│  │  ├─ seed/tang_750.py    唐朝天宝九年内置世界（7 道、2 势力、8 条粮道）
 │  │  └─ cli.py              init-db / seed / new-branch / advance / show
-│  ├─ tests/                 28 个测试（规则、引擎、API）
+│  ├─ tests/                 47 个测试（规则、引擎、传导、干预、API）
 │  └─ run.py                 开发入口
-├─ web/                      地图界面（原生 JS + SVG，无构建步骤）
+├─ frontend/                 Vue 3 + Vite 前端（新界面）
+│  ├─ src/components/        MapView / EventFeed / RegionDetail
+│  ├─ build.mjs              构建脚本（绕过本机 spawn 限制）
+│  └─ smoke.mjs              jsdom 渲染冒烟测试
+├─ web/                      旧版静态界面（保留在 /legacy 作为回退）
 ├─ docs/                     设计文档、开发环境说明
-└─ tools/                    环境脚本、地理数据生成、连接诊断、验收脚本
+└─ tools/                    地理数据生成、连接诊断、验收与演示脚本
+```
+
+## 界面入口
+
+| 路径 | 说明 |
+|---|---|
+| `/` | 重定向到 `/app/` |
+| `/app/` | **Vue 3 新版界面** |
+| `/legacy` | 旧版原生 JS 界面（回退用） |
+
+## 前端构建
+
+本机 Node 环境禁止以管道方式 spawn 子进程，Vite 内部的 esbuild 会因此失败。
+`frontend/build.mjs` 在加载 Vite 前禁用 `child_process` 并同步内置 ESM 导出，
+再把 `vue` 指向预构建的 browser ESM、目标设为 `esnext`，从而跳过所有 spawn 环节。
+
+```powershell
+cd frontend
+node build.mjs     # 产物输出到 dist/，由 Flask 在 /app/ 托管
+node smoke.mjs     # 用 jsdom 真实挂载并断言渲染结果
 ```
 
 ### 地图数据
