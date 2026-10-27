@@ -1,4 +1,4 @@
-"""决策：世界主动向用户提出的问题。
+﻿"""决策：世界主动向用户提出的问题。
 
 设计目的：让"用户不知道该干什么"变成"世界告诉你要决定什么"。
 每道决策都带 2–3 个选项，每个选项写明代价与后果，选完立即生效并留下事件。
@@ -24,6 +24,7 @@ from ..models import (
     SimEvent,
 )
 from ..utils import format_date
+from .counsel import attach_advice
 from .military import candidates_for_command
 
 #: 同一类决策在这段时间内不重复提出（月）
@@ -368,15 +369,27 @@ def raise_decisions(
         )
 
     # 7) 主帅空缺：某支军队没了主将，得派人去带
+    #: 已在带兵的人，不再重复任命
+    busy = {
+        a.commander_key
+        for a in armies.values()
+        if a.commander_key and a.army_key != ""
+    }
     for army in armies.values():
         if army.faction_key != "tang":
             continue
+        if not getattr(army, "raised", True):
+            continue  # 还没成军的部队不需要主帅
         commander = characters.get(army.commander_key or "")
         if commander is not None and commander.alive:
             continue
         if _has_recent(session, branch.id, "appoint_commander", tick, key=army.army_key):
             continue
-        pool = candidates_for_command(characters, "tang", limit=3)
+        pool = [
+            person
+            for person in candidates_for_command(characters, "tang", limit=8)
+            if person.character_key not in busy
+        ][:3]
         if not pool:
             continue
 
@@ -421,6 +434,10 @@ def raise_decisions(
     for decision in created:
         session.add(decision)
     if created:
+        session.flush()
+        # 决策落库后立刻让朝臣开口：有话说就说，没人可问就留空
+        for decision in created:
+            attach_advice(decision, characters, armies)
         session.flush()
     return created
 

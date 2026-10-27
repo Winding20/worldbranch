@@ -403,6 +403,11 @@ class RelationState(Base):
         }
 
 
+def _consensus(advice: list[dict[str, Any]]) -> bool:
+    keys = {item.get("option_key") for item in advice}
+    return len(keys) == 1
+
+
 class Decision(Base):
     """摆在用户面前的一道抉择。
 
@@ -428,6 +433,9 @@ class Decision(Base):
 
     #: [{"key": "...", "label": "...", "detail": "...", "effects": {...}}]
     options: Mapped[list[Any]] = mapped_column(JSON, default=list)
+    #: 人物进谏：[{"name", "option_key", "text", "ability", "loyalty", "tag"}]
+    #: 这些是**按建模规则推出来的立场**，不是史料所载奏议原文。
+    advice: Mapped[list[Any]] = mapped_column(JSON, default=list)
     #: 关联的键（例如史实事件 key），用于把决策回溯到它所属的历史节点
     ref_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
@@ -451,6 +459,9 @@ class Decision(Base):
             "trigger_event_id": self.trigger_event_id,
             "ref_key": self.ref_key,
             "options": self.options or [],
+            "advice": self.advice or [],
+            # 朝议是否一致。全票同意时界面可以直接说"朝议一致"
+            "advice_consensus": _consensus(self.advice or []),
             "status": self.status,
             "resolved_option": self.resolved_option,
             "result_event_id": self.result_event_id,

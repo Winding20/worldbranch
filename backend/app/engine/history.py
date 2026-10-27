@@ -15,6 +15,7 @@ from typing import Any, Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .counsel import attach_advice
 from ..models import (
     ArmyState,
     Branch,
@@ -138,6 +139,8 @@ def run_historical_events(
                 status="pending",
             )
             session.add(decision)
+            session.flush()
+            attach_advice(decision, characters, event=event)
             session.add(
                 HistoricalFire(
                     branch_id=branch.id,
