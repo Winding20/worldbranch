@@ -457,7 +457,7 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
         "category": "battle",
         "description": "广平王俶与郭子仪率军收复长安，肃宗还京。",
         "conditions": {"region_lost": "changan", "character_alive": "guo_ziyi"},
-        "effects": {"gain_region": "changan", "legitimacy": 0.10},
+        "effects": {"gain_region": "changan", "gain_region_extra": ["tongguan"], "legitimacy": 0.10},
         "divergence_note": "长安未复，或已由唐军掌握。",
         "source": "《资治通鉴》卷二二〇",
     },
@@ -531,6 +531,102 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
                         "treasury": -150_000,
                         "legitimacy": 0.05,
                         "morale": {"yecheng_army": 0.10},
+                    },
+                },
+            ],
+        },
+    },
+    {
+        "key": "pursue_qingxu",
+        "date": dt.date(758, 1, 5),
+        "title": "是否穷追安庆绪",
+        "category": "battle",
+        "description": (
+            "两京既复，安庆绪北走邺城，余众尚十万。"
+            "诸将请乘胜追之，朝中则有议：师老兵疲，宜先休整。"
+        ),
+        "conditions": {"region_held": "luoyang", "character_alive": "an_qingxu"},
+        "effects": {"treasury": -300_000, "morale": {"yecheng_army": -0.10}},
+        "divergence_note": "安庆绪已不在，无从追讨。",
+        "source": "《资治通鉴》卷二二〇",
+        "fork": {
+            "title": "邺城未下",
+            "description": (
+                "唐军已复两京，安庆绪退保邺城。诸将请乘胜急攻，"
+                "监军以为士卒疲敝，宜待来春。追与不追，在此一决。"
+            ),
+            "options": [
+                {
+                    "key": "pursue",
+                    "label": "乘胜急攻",
+                    "detail": "府库 −300,000 贯；叛乱可望速平，然师老兵疲，若顿兵城下则陷于被动",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "rest",
+                    "label": "休整再图",
+                    "detail": "府库 −150,000 贯，士气回升；但安庆绪得以喘息，史思明有时间整合其众",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -150_000,
+                        "morale": {"yecheng_army": 0.15},
+                        "legitimacy": -0.02,
+                    },
+                },
+                {
+                    "key": "offer_amnesty",
+                    "label": "许其归降",
+                    "detail": "不费兵戈；若安庆绪受抚，乱可早平，若诈降则养虎为患",
+                    "outcome": "diverge",
+                    "effects": {"treasury": -80_000, "legitimacy": 0.03},
+                },
+            ],
+        },
+    },
+    {
+        "key": "strip_guo_ziyi",
+        "date": dt.date(759, 5, 1),
+        "title": "郭子仪被夺兵权",
+        "category": "court",
+        "description": (
+            "邺城之败，监军鱼朝恩归罪于郭子仪，肃宗召其还京，以李光弼代领朔方军。"
+            "临阵易帅，诸将不平。"
+        ),
+        "conditions": {"character_alive": "guo_ziyi"},
+        "effects": {"morale": {"shuofang_army": -0.20}, "legitimacy": -0.04},
+        "divergence_note": "郭子仪已不在，无从夺其兵权。",
+        "source": "《资治通鉴》卷二二一",
+        "fork": {
+            "title": "邺城败后，谁任朔方",
+            "description": (
+                "九节度溃于邺城，总要有人担这个责。一步错，军心便散——"
+                "是留郭子仪，还是听监军之言换人？"
+            ),
+            "options": [
+                {
+                    "key": "replace_guo",
+                    "label": "召郭子仪还京，以李光弼代之",
+                    "detail": "按史载：临阵易帅，朔方军心大损；李光弼虽能，然将士不服",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "keep_guo",
+                    "label": "留郭子仪领朔方",
+                    "detail": "军心不散，然监军与朝中非议不止，朝廷威望略损",
+                    "outcome": "diverge",
+                    "effects": {
+                        "morale": {"shuofang_army": 0.10},
+                        "legitimacy": -0.03,
+                    },
+                },
+                {
+                    "key": "dual_command",
+                    "label": "郭、李并任，分领其军",
+                    "detail": "府库 −200,000 贯；两将相济，然事权不一，号令难齐",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -200_000,
+                        "morale": {"shuofang_army": 0.05, "hedong_army": 0.05},
                     },
                 },
             ],
@@ -626,6 +722,58 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
         "effects": {"gain_region": "luoyang", "legitimacy": 0.08},
         "divergence_note": "洛阳未复。",
         "source": "《资治通鉴》卷二二二",
+    },
+    {
+        "key": "reward_warlords",
+        "date": dt.date(763, 2, 1),
+        "title": "如何安置河北降将",
+        "category": "politics",
+        "description": (
+            "史朝义既死，其部将田承嗣、李怀仙等以河北降。"
+            "朝中或请尽徙其众以绝后患，或请就地授以节度使以安反侧。"
+        ),
+        "conditions": {"character_dead": "shi_chaoyi"},
+        "effects": {"legitimacy": 0.06},
+        "divergence_note": "乱事未平，无从安置。",
+        "source": "《资治通鉴》卷二二二",
+        "fork": {
+            "title": "河北归降，如何处置",
+            "description": (
+                "降将拥兵数万，交出战马甲仗，却仍据其城、统其众。"
+                "朝廷若强徙其众，恐激而生变；若就地授节，则河北自此不复为朝廷所有。"
+            ),
+            "options": [
+                {
+                    "key": "appoint_them",
+                    "label": "就地授节度使",
+                    "detail": "按史载：田承嗣等各领其州，河朔三镇自此形成，割据近百年",
+                    "outcome": "historical",
+                    "effects": {"nominal_control": ["fanyang", "hebei_plain"]},
+                },
+                {
+                    "key": "relocate",
+                    "label": "尽徙其众于关中",
+                    "detail": "府库 −800,000 贯；藩镇之患可免，然途中生变之险极大",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -800_000,
+                        "legitimacy": 0.08,
+                        "unrest": {"hebei_plain": 0.15},
+                    },
+                },
+                {
+                    "key": "divide",
+                    "label": "分其众为数镇，互不统属",
+                    "detail": "府库 −300,000 贯；强弱相制，可收其权，然需长期经营",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -300_000,
+                        "legitimacy": 0.05,
+                        "unrest": {"hebei_plain": 0.05},
+                    },
+                },
+            ],
+        },
     },
     {
         "key": "shi_chaoyi_dead",

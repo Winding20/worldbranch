@@ -1,4 +1,4 @@
-"""校验唐朝切片的数据完整性。"""
+﻿"""校验唐朝切片的数据完整性。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
 from app.seed import anlushan_755 as m  # noqa: E402
 
-ALLOWED = {"region_held", "region_lost", "character_alive"}
+ALLOWED = {"region_held", "region_lost", "character_alive", "character_dead"}
 
 
 def main() -> int:
@@ -30,7 +30,7 @@ def main() -> int:
                 problems.append(f"{event['key']}: 未知条件 {cond}")
             elif cond in {"region_held", "region_lost"} and value not in region_keys:
                 problems.append(f"{event['key']}: 未知地区 {value}")
-            elif cond == "character_alive" and value not in char_keys:
+            elif cond in {"character_alive", "character_dead"} and value not in char_keys:
                 problems.append(f"{event['key']}: 未知人物 {value}")
 
         effects = event.get("effects") or {}

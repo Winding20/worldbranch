@@ -8,6 +8,7 @@ from sqlalchemy import select
 from ..app_factory import get_db
 from ..engine import SimulationEngine
 from ..engine.ending import evaluate_ending
+from ..engine.end_tang import evaluate_tang_ending
 from ..engine.history import history_status
 from ..engine.loyalty import loyalty_overview
 from ..engine.military import all_powers, candidates_for_command, side_strength
@@ -26,6 +27,7 @@ from ..models import (
     RegionState,
     SimEvent,
     Snapshot,
+    World,
 )
 from ..utils import format_date
 from ..services import (
@@ -145,7 +147,12 @@ def ending_route(branch_id: int):
     """五年结局评估；未满五年返回 204。"""
     with get_db().session() as session:
         branch = get_branch(session, branch_id)
-        result = evaluate_ending(session, branch)
+        world = session.get(World, branch.world_id)
+        # 唐朝切片有自己的成败标准（两京、乱平、河北归属），不用通用五年评分
+        if world is not None and world.key == "tang_755":
+            result = evaluate_tang_ending(session, branch)
+        else:
+            result = evaluate_ending(session, branch)
         if result is None:
             return ("", 204)
         return jsonify(result)

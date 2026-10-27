@@ -63,6 +63,12 @@ def check_conditions(
                 return False, f"{value} 不在此世界"
             if region.faction_key == "tang":
                 return False, f"{region.name} 仍在唐军手中"
+        elif key == "character_dead":
+            person = characters.get(value)
+            if person is None:
+                return False, f"{value} 不在此世界"
+            if person.alive:
+                return False, f"{person.name}尚在"
         elif key == "character_alive":
             person = characters.get(value)
             if person is None:
@@ -258,10 +264,29 @@ def _apply_effects(
             region.faction_key = "yan"
             applied.append({"label": f"{region.name}失守", "before": "唐", "after": "燕"})
 
+    # 名义归附：叛军投降，州郡在名义上归唐，实则由降将自专
+    for key in effects.get("nominal_control") or []:
+        region = regions.get(key)
+        if region is not None:
+            before = "燕" if region.faction_key != "tang" else "唐"
+            region.faction_key = "tang"
+            region.autonomous = True
+            applied.append(
+                {"label": f"{region.name}名义归附", "before": before, "after": "唐（藩镇自专）"}
+            )
+
     if effects.get("gain_region"):
         region = regions.get(effects["gain_region"])
         if region is not None and region.faction_key != "tang":
             region.faction_key = "tang"
+            applied.append({"label": f"收复{region.name}", "before": "燕", "after": "唐"})
+
+    # 同一次收复里连带收回的据点（如收复长安时一并复潼关）
+    for key in effects.get("gain_region_extra") or []:
+        region = regions.get(key)
+        if region is not None and region.faction_key != "tang":
+            region.faction_key = "tang"
+            region.autonomous = False
             applied.append({"label": f"收复{region.name}", "before": "燕", "after": "唐"})
 
     for key in effects.get("kill") or []:
@@ -368,7 +393,16 @@ def resolve_fork(
     }
 
     follow_history = option.get("outcome") == "historical"
-    effects = (event.effects or {}) if follow_history else (option.get("effects") or {})
+    # 按史载时，事件效果与选项自带的补充效果都要生效：
+    # 例如「就地授节度使」既是史实结果，也要把河北标成藩镇自专。
+    effects = dict(event.effects or {})
+    for key, value in (option.get("effects") or {}).items():
+        if isinstance(value, dict) and isinstance(effects.get(key), dict):
+            effects[key] = {**effects[key], **value}
+        else:
+            effects[key] = value
+    if not follow_history:
+        effects = option.get("effects") or {}
     applied = _apply_effects(
         effects,
         regions=regions,

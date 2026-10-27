@@ -532,6 +532,8 @@ class RegionState(Base):
     price_index: Mapped[float] = mapped_column(Float, default=1.0)
     unrest: Mapped[float] = mapped_column(Float, default=0.0)
     faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 名义归朝廷、实则自专（河朔三镇式藩镇）
+    autonomous: Mapped[bool] = mapped_column(default=False)
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -544,6 +546,7 @@ class RegionState(Base):
             "price_index": round(self.price_index, 4),
             "unrest": round(self.unrest, 4),
             "faction_key": self.faction_key,
+            "autonomous": self.autonomous,
         }
 
 

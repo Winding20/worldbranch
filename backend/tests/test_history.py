@@ -1,4 +1,4 @@
-"""唐史切片（755–763）的数据与史实事件测试。"""
+﻿"""唐史切片（755–763）的数据与史实事件测试。"""
 
 from __future__ import annotations
 
@@ -348,6 +348,21 @@ def test_full_eight_years_follows_history(db_session):
         if branch.current_date.year >= 763:
             break
 
+    # 平乱之后还有一道抉择（如何安置河北降将），收尾时把它也按史载处理
+    for decision in db_session.scalars(
+        select(Decision).where(
+            Decision.branch_id == branch.id,
+            Decision.kind == "history_fork",
+            Decision.status == "pending",
+        )
+    ):
+        option = next(
+            (o for o in decision.options if o.get("outcome") == "historical"),
+            decision.options[0],
+        )
+        resolve_decision(db_session, branch, decision, option["key"])
+        db_session.flush()
+
     assert branch.current_date.year >= 763, "应当推进到广德元年"
 
     fires = {
@@ -361,13 +376,21 @@ def test_full_eight_years_follows_history(db_session):
     assert not missing, f"这些史实从未被判定: {missing}"
     assert all(status == "fired" for status in fires.values()), fires
 
-    # 潼关与河北始终未收复，与史实一致
+    # 潼关随长安一并收复（757 年），河北则名义归附、实则藩镇自专
     tongguan = db_session.scalar(
         select(RegionState).where(
             RegionState.branch_id == branch.id, RegionState.region_key == "tongguan"
         )
     )
-    assert tongguan.faction_key == "yan"
+    assert tongguan.faction_key == "tang"
+
+    hebei = db_session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id, RegionState.region_key == "hebei_plain"
+        )
+    )
+    assert hebei.faction_key == "tang"
+    assert hebei.autonomous is True, "安史之乱平定的代价正是河北藩镇化"
 
 
 def test_history_api(client):
