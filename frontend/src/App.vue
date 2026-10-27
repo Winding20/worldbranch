@@ -9,7 +9,7 @@ import AiPanel from "./components/AiPanel.vue";
 import DecisionPanel from "./components/DecisionPanel.vue";
 import EndingCard from "./components/EndingCard.vue";
 
-const WORLD = "tang_750";
+const WORLD = "tang_755";
 const PRECISIONS = [
   { key: "macro", name: "宏观推演", desc: "国家与地区关系" },
   { key: "standard", name: "标准模拟", desc: "重要地区与势力" },
@@ -37,6 +37,11 @@ const scenario = ref(null);
 const lastReport = ref(null);
 const ending = ref(null);
 const decisionResult = ref(null);
+const armies = ref({ armies: [], tang_total: 0, yan_total: 0 });
+const loyalty = ref([]);
+const historyStatus = ref({ fired: [], diverged: [] });
+//: 右侧分组：决断 / 军事 / 人物 / 史实
+const panel = ref("decide");
 
 const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
@@ -104,6 +109,26 @@ async function loadDecisions() {
   relations.value = await api.relations(branch.value.id);
 }
 
+async function loadCourt() {
+  if (!branch.value) return;
+  const id = branch.value.id;
+  try {
+    armies.value = await api.armies(id);
+  } catch (err) {
+    armies.value = { armies: [], tang_total: 0, yan_total: 0 };
+  }
+  try {
+    loyalty.value = await api.loyalty(id);
+  } catch (err) {
+    loyalty.value = [];
+  }
+  try {
+    historyStatus.value = await api.history(id);
+  } catch (err) {
+    historyStatus.value = { fired: [], diverged: [] };
+  }
+}
+
 async function loadEnding() {
   if (!branch.value) return;
   try {
@@ -121,6 +146,7 @@ async function boot() {
     await loadEvents();
     await loadView();
     await loadDecisions();
+    await loadCourt();
     await loadEnding();
   } catch (err) {
     error.value = `初始化失败：${err.message}`;
@@ -138,6 +164,7 @@ async function advance(months) {
     await loadState();
     await loadEvents();
     await loadDecisions();
+    await loadCourt();
     await loadEnding();
     const bits = [`已推进 ${report.months} 个月（${report.from_date} → ${report.to_date}）`];
     if (report.event_count) bits.push(`新事件 ${report.event_count} 条`);
@@ -164,6 +191,7 @@ async function onResolve(decision, option) {
     await loadState();
     await loadEvents();
     await loadDecisions();
+    await loadCourt();
   } catch (err) {
     message.value = `决断失败：${err.message}`;
   } finally {
@@ -310,19 +338,6 @@ onMounted(boot);
       </div>
 
       <div class="panel-block">
-        <h2>
-          待决事项
-          <span v-if="decisions.length" class="count urgent">{{ decisions.length }}</span>
-        </h2>
-        <DecisionPanel
-          :decisions="decisions"
-          :relations="relations"
-          :busy="busy"
-          @resolve="onResolve"
-        />
-      </div>
-
-      <div class="panel-block">
         <h2>推进时间</h2>
         <div class="advance-row">
           <button class="advance" :disabled="busy" @click="advance(1)">推进 1 月</button>
@@ -344,6 +359,95 @@ onMounted(boot);
             </button>
           </div>
         </details>
+      </div>
+
+      <div class="tab-strip">
+        <button
+          v-for="tab in [
+            { key: 'decide', name: '决断', badge: decisions.length },
+            { key: 'war', name: '军事', badge: 0 },
+            { key: 'people', name: '人物', badge: 0 },
+            { key: 'history', name: '史实', badge: historyStatus.diverged.length },
+          ]"
+          :key="tab.key"
+          :class="{ active: panel === tab.key }"
+          @click="panel = tab.key"
+        >
+          {{ tab.name }}
+          <span v-if="tab.badge" class="count urgent">{{ tab.badge }}</span>
+        </button>
+      </div>
+
+      <div v-show="panel === 'decide'" class="panel-block">
+        <h2>
+          待决事项
+          <span v-if="decisions.length" class="count urgent">{{ decisions.length }}</span>
+        </h2>
+        <DecisionPanel
+          :decisions="decisions"
+          :relations="relations"
+          :busy="busy"
+          @resolve="onResolve"
+        />
+      </div>
+
+      <div v-show="panel === 'war'" class="panel-block">
+        <h2>各军</h2>
+        <div class="army-totals">
+          <span>唐军 {{ Math.round(armies.tang_total).toLocaleString() }}</span>
+          <span>燕军 {{ Math.round(armies.yan_total).toLocaleString() }}</span>
+        </div>
+        <div v-for="a in armies.armies" :key="a.army_key" class="army">
+          <div class="army-head">
+            <span class="a-name">{{ a.name }}</span>
+            <span class="a-power">{{ Math.round(a.power).toLocaleString() }}</span>
+          </div>
+          <div class="army-meta">
+            {{ a.commander_name }} · 兵 {{ a.troops.toLocaleString() }}
+          </div>
+          <div class="army-bars">
+            <span class="bar"><i :style="{ width: a.morale * 100 + '%' }"></i></span>
+            <span class="bar-label">士气 {{ a.morale.toFixed(2) }}</span>
+          </div>
+          <div class="army-bars">
+            <span class="bar supply"><i :style="{ width: a.supply * 100 + '%' }"></i></span>
+            <span class="bar-label">补给 {{ a.supply.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-show="panel === 'people'" class="panel-block">
+        <h2>人物</h2>
+        <div v-for="p in loyalty" :key="p.key" class="person" :class="p.status">
+          <div class="p-head">
+            <span class="p-name">{{ p.name }}</span>
+            <span class="p-status">{{ p.status }}</span>
+          </div>
+          <div class="p-meta">{{ p.office || "无官职" }} · 统兵 {{ p.troops.toLocaleString() }}</div>
+          <div class="p-bars">
+            <span class="bar"><i :style="{ width: p.loyalty * 100 + '%' }"></i></span>
+            <span class="bar-label">忠 {{ p.loyalty.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-show="panel === 'history'" class="panel-block">
+        <h2>史实对照</h2>
+        <p class="hint">按史载发生的记为「应验」；因前提改变而没有发生的记为「改道」。</p>
+        <div v-if="historyStatus.diverged.length" class="hist-group">
+          <div class="hist-title">改道 {{ historyStatus.diverged.length }}</div>
+          <div v-for="h in historyStatus.diverged" :key="h.key" class="hist-row diverged">
+            <span class="h-title">{{ h.title }}</span>
+            <span class="h-note">{{ h.date }} · {{ h.reason }}</span>
+          </div>
+        </div>
+        <div class="hist-group">
+          <div class="hist-title">应验 {{ historyStatus.fired.length }}</div>
+          <div v-for="h in historyStatus.fired" :key="h.key" class="hist-row">
+            <span class="h-title">{{ h.title }}</span>
+            <span class="h-note">{{ h.date }}</span>
+          </div>
+        </div>
       </div>
 
       <div v-if="changes.length" class="panel-block">

@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -642,20 +644,20 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
 # --------------------------------------------------------------------------- #
 # 写入
 # --------------------------------------------------------------------------- #
-def _simple_geo(lat: float, lon: float, size: float = 0.6):
-    """关键地区用近似方框表示，只求能画出来。"""
-    return {
-        "type": "Polygon",
-        "coordinates": [
-            [
-                [lon - size, lat - size * 0.8],
-                [lon + size, lat - size * 0.8],
-                [lon + size, lat + size * 0.8],
-                [lon - size, lat + size * 0.8],
-                [lon - size, lat - size * 0.8],
-            ]
-        ],
-    }
+#: 真实边界：由唐朝七道按历史情形切分而来，见 tools/build_geo_755.py
+_GEO_PATH = Path(__file__).with_name("data") / "tang_755_geo.json"
+_GEO: dict[str, Any] = (
+    json.loads(_GEO_PATH.read_text(encoding="utf-8"))["dao"]
+    if _GEO_PATH.exists()
+    else {}
+)
+
+
+def _geo(key: str):
+    """取真实边界；缺失时明确报错，不退回方块糊弄。"""
+    if key not in _GEO:
+        raise LookupError(f"缺少 {key} 的地理数据，请先运行 tools/build_geo_755.py")
+    return _GEO[key]
 
 
 def seed(session: Session) -> World:
@@ -687,7 +689,7 @@ def seed(session: Session) -> World:
                 level="region",
                 lat=item["lat"],
                 lon=item["lon"],
-                geo=_simple_geo(item["lat"], item["lon"]),
+                geo=_geo(item["key"]),
                 population=item["population"],
                 farmland=round(annual_need * 1.02 / season_sum, 1),
                 grain_stock=round(item["population"] * GRAIN_PER_CAPITA_MONTH * 4, 1),

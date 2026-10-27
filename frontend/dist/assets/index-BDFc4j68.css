@@ -576,6 +576,103 @@ html, body {
 .r-value b.down { color: #d8614a; }
 .r-empty { font-size: 11px; color: #8fa1b0; padding: 4px 0 8px; }
 
+/* ---------------------------- 分页 ---------------------------- */
+.tab-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.tab-strip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 0;
+  font-size: 12px;
+  color: #8fa1b0;
+  background: #1d262f;
+  border: 1px solid #2a3540;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tab-strip button.active {
+  color: #f0d6a8;
+  border-color: rgba(216, 162, 74, 0.7);
+  background: rgba(216, 162, 74, 0.1);
+}
+
+/* ---------------------------- 各军 ---------------------------- */
+.army-totals {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #c6d6e2;
+  padding: 6px 10px;
+  background: #1d262f;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.army {
+  border: 1px solid #2a3540;
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin-bottom: 7px;
+}
+.army-head { display: flex; justify-content: space-between; align-items: baseline; }
+.a-name { font-size: 12.5px; color: #dfe7ee; font-weight: 600; }
+.a-power { font-size: 12.5px; color: #d8a24a; font-weight: 600; }
+.army-meta { font-size: 10.5px; color: #8fa1b0; margin: 3px 0 6px; }
+.army-bars { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.bar {
+  flex: 1;
+  height: 4px;
+  background: #172029;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, #4aa8d8, #6fd8a8); }
+.bar.supply i { background: linear-gradient(90deg, #d8a24a, #d86a4a); }
+.bar-label { font-size: 10px; color: #8fa1b0; width: 76px; text-align: right; }
+
+/* ---------------------------- 人物 ---------------------------- */
+.person {
+  border-left: 3px solid #2a3540;
+  padding: 7px 10px;
+  margin-bottom: 7px;
+  background: #1a232c;
+  border-radius: 0 8px 8px 0;
+}
+.person.功高 { border-left-color: #d8a24a; }
+.person.拥兵自重 { border-left-color: #d87a4a; }
+.person.将叛 { border-left-color: #d84a4a; }
+.person.已叛 { border-left-color: #8a2a2a; opacity: 0.75; }
+.p-head { display: flex; justify-content: space-between; align-items: baseline; }
+.p-name { font-size: 12.5px; color: #dfe7ee; font-weight: 600; }
+.p-status { font-size: 10.5px; color: #8fa1b0; }
+.person.功高 .p-status { color: #d8a24a; }
+.person.拥兵自重 .p-status { color: #d87a4a; }
+.person.将叛 .p-status, .person.已叛 .p-status { color: #d84a4a; }
+.p-meta { font-size: 10.5px; color: #8fa1b0; margin: 3px 0 5px; }
+.p-bars { display: flex; align-items: center; gap: 8px; }
+
+/* ---------------------------- 史实 ---------------------------- */
+.hist-group { margin-bottom: 12px; }
+.hist-title { font-size: 11px; color: #8fa1b0; margin-bottom: 5px; }
+.hist-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(42, 53, 64, 0.7);
+}
+.hist-row:last-child { border-bottom: none; }
+.hist-row .h-title { color: #dfe7ee; }
+.hist-row .h-note { color: #8fa1b0; font-size: 10.5px; text-align: right; }
+.hist-row.diverged .h-title { color: #d8a24a; }
+.hist-row.diverged .h-note { color: #c98f5a; }
+
 .layout {
   flex: 1;
   display: grid;

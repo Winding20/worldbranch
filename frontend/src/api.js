@@ -83,4 +83,7 @@ export const api = {
     }),
   relations: (id) => request(`/api/branches/${id}/relations`),
   ending: (id) => request(`/api/branches/${id}/ending`),
+  armies: (id) => request(`/api/branches/${id}/armies`),
+  loyalty: (id) => request(`/api/branches/${id}/loyalty`),
+  history: (id) => request(`/api/branches/${id}/history`),
 };

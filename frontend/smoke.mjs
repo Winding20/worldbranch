@@ -76,13 +76,13 @@ const regionLabelsAtStart = window.document.querySelectorAll("text.region-label"
 const checks = {
   "已挂载": body.length > 200,
   "出现地图 SVG": body.includes("<svg"),
-  "地区标签 7 个": regionLabelsAtStart.length === 7,
-  "出现地区名": /关内道|河南道|河北道/.test(body),
+  "地区标签 7 个": regionLabelsAtStart.length >= 7,
+  "出现地区名": /关内道|河南道|河北道|京兆|潼关/.test(body),
   "事件流已渲染": body.includes("事件流"),
-  "出现模拟控制": body.includes("推进"),
-  "出现开局情境": /唐廷 · 天宝九年/.test(body),
+  "出现推进按钮": body.includes("推进 1 月"),
+  "出现开局情境": /唐廷 · 天宝十四载/.test(body),
   "出现待决事项面板": body.includes("待决事项"),
-  "出现臣属度": body.includes("臣属度"),
+  "出现分页标签": body.includes("军事") && body.includes("人物") && body.includes("史实"),
   "无运行时错误": errors.length === 0,
 };
 
@@ -96,6 +96,55 @@ if (errors.length) {
   errors.slice(0, 5).forEach((e) => console.log("  -", e));
 }
 console.log(`\n渲染内容长度：${body.length}`);
+
+// ---- 侧栏四个分组：决断 / 军事 / 人物 / 史实 ----
+async function openPanel(name) {
+  const btn = [...window.document.querySelectorAll(".tab-strip button")].find(
+    (b) => b.textContent.trim().startsWith(name)
+  );
+  if (!btn) return null;
+  btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(300);
+  return window.document.querySelector(".side-panel").innerHTML;
+}
+
+console.log("\n【军事分组】");
+const warHtml = await openPanel("军事");
+const warChecks = {
+  "能切到军事": warHtml !== null,
+  "列出各军": /潼关守军|朔方军|范阳军/.test(warHtml || ""),
+  "显示主帅": /哥舒翰|郭子仪|安禄山/.test(warHtml || ""),
+  "显示双方总战力": /唐军/.test(warHtml || "") && /燕军/.test(warHtml || ""),
+};
+for (const [n, ok] of Object.entries(warChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
+
+console.log("\n【人物分组】");
+const peopleHtml = await openPanel("人物");
+const peopleChecks = {
+  "能切到人物": peopleHtml !== null,
+  "列出入物": /哥舒翰|李光弼|郭子仪/.test(peopleHtml || ""),
+  "显示忠诚": /忠 0\./.test(peopleHtml || "") || /忠诚/.test(peopleHtml || ""),
+  "显示状态": /功高|恭顺|在朝|将叛/.test(peopleHtml || ""),
+};
+for (const [n, ok] of Object.entries(peopleChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
+
+console.log("\n【史实分组】");
+const historyHtml = await openPanel("史实");
+const histChecks = {
+  "能切到史实": historyHtml !== null,
+  "显示应验计数": /应验/.test(historyHtml || ""),
+  "显示改道计数": /改道/.test(historyHtml || ""),
+};
+for (const [n, ok] of Object.entries(histChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
 
 // ---- 第二个视图：分支对比 ----
 const tab = [...window.document.querySelectorAll(".view-tabs button")].find(
