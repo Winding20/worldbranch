@@ -1,4 +1,4 @@
-﻿"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
+"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,14 @@ from sqlalchemy import select
 
 from ..app_factory import get_db
 from ..engine import SimulationEngine
-from ..models import FactionState, RegionState, SimEvent, Snapshot
+from ..engine.decisions import (
+    DecisionError,
+    decision_history,
+    describe_relation,
+    pending_decisions,
+    resolve_decision,
+)
+from ..models import Decision, FactionState, RegionState, SimEvent, Snapshot
 from ..utils import format_date
 from ..services import (
     aggregate_by_scale,
@@ -25,6 +32,40 @@ bp = Blueprint("branches", __name__, url_prefix="/api/branches")
 
 #: 事件范围对应的最小展示层级（越大越宏观）
 SCOPE_ORDER = {"local": 1, "region": 2, "nation": 3, "world": 4}
+
+
+@bp.get("/<int:branch_id>/decisions")
+def decisions_route(branch_id: int):
+    """当前待决的问题；带 history=1 时返回全部历史。"""
+    include_history = request.args.get("history") == "1"
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        rows = (
+            decision_history(session, branch_id)
+            if include_history
+            else pending_decisions(session, branch_id)
+        )
+        return jsonify([d.to_dict() for d in rows])
+
+
+@bp.post("/<int:branch_id>/decisions/<int:decision_id>/resolve")
+def resolve_decision_route(branch_id: int, decision_id: int):
+    payload = request.get_json(silent=True) or {}
+    option = payload.get("option", "")
+    with get_db().session() as session:
+        branch = get_branch(session, branch_id)
+        decision = session.get(Decision, decision_id)
+        if decision is None or decision.branch_id != branch_id:
+            raise LookupError("决策不存在")
+        event = resolve_decision(session, branch, decision, option)
+        return jsonify({"decision": decision.to_dict(), "event": event.to_dict()})
+
+
+@bp.get("/<int:branch_id>/relations")
+def relations_route(branch_id: int):
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        return jsonify(describe_relation(session, branch_id))
 
 
 @bp.get("/<int:branch_id>/view")

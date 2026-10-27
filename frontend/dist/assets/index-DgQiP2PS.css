@@ -301,6 +301,57 @@
   white-space: pre-wrap; max-height: 340px; overflow: auto;
   font-family: "Consolas", "Microsoft YaHei", monospace;
 }
+
+.decision-panel[data-v-32c93159] { display: flex; flex-direction: column; gap: 10px;
+}
+.relation[data-v-32c93159] {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11.5px; padding: 6px 10px; border-radius: 8px;
+  background: #1d262f; border: 1px solid #2a3540;
+}
+.rel-label[data-v-32c93159] { color: #8fa1b0;
+}
+.rel-value[data-v-32c93159] { font-weight: 600;
+}
+.rel-value.ok[data-v-32c93159] { color: #4ad89a;
+}
+.rel-value.warn[data-v-32c93159] { color: #d8a24a;
+}
+.rel-value.danger[data-v-32c93159] { color: #d8614a;
+}
+.no-decision[data-v-32c93159] {
+  font-size: 11.5px; color: #8fa1b0; padding: 10px 12px;
+  border: 1px dashed #2a3540; border-radius: 9px; line-height: 1.6;
+}
+.decision-card[data-v-32c93159] {
+  border: 1px solid rgba(216, 162, 74, 0.55);
+  background: linear-gradient(180deg, rgba(216, 162, 74, 0.08), transparent);
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+.d-head[data-v-32c93159] { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;
+}
+.d-date[data-v-32c93159] { font-size: 10.5px; color: #8fa1b0;
+}
+.d-title[data-v-32c93159] { font-size: 13.5px; font-weight: 600; color: #f0d6a8;
+}
+.d-desc[data-v-32c93159] { margin: 0 0 10px; font-size: 11.5px; line-height: 1.65; color: #c6d6e2;
+}
+.d-options[data-v-32c93159] { display: flex; flex-direction: column; gap: 6px;
+}
+.d-option[data-v-32c93159] {
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid #2a3540; background: #1d262f; cursor: pointer;
+}
+.d-option[data-v-32c93159]:hover:not(:disabled) { border-color: #d8a24a; background: rgba(216, 162, 74, 0.08);
+}
+.d-option[data-v-32c93159]:disabled { opacity: 0.5; cursor: progress;
+}
+.opt-label[data-v-32c93159] { font-size: 12.5px; color: #dfe7ee; font-weight: 600;
+}
+.opt-detail[data-v-32c93159] { font-size: 10.5px; color: #8fa1b0; line-height: 1.5;
+}
 :root {
   --bg: #0f1419;
   --panel: #161d24;
@@ -423,6 +474,54 @@ html, body {
   color: #c6d6e2;
   padding: 2px 0;
 }
+
+/* ---------------------------- 开局情境 ---------------------------- */
+.brief { background: linear-gradient(180deg, rgba(74, 168, 216, 0.09), transparent); }
+.brief-role {
+  font-size: 15px;
+  font-weight: 700;
+  color: #8fc9e6;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.brief-goal { margin: 0 0 8px; font-size: 12px; line-height: 1.7; color: #dfe7ee; }
+.brief-more summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #8fa1b0;
+  outline: none;
+}
+.brief-more summary:hover { color: #4aa8d8; }
+.brief-text { margin: 8px 0; font-size: 11.5px; line-height: 1.75; color: #c6d6e2; }
+.brief-list { margin: 0; padding-left: 18px; font-size: 11px; color: #8fa1b0; line-height: 1.8; }
+
+/* ---------------------------- 变化摘要 ---------------------------- */
+.changes { display: flex; flex-direction: column; gap: 4px; }
+.change-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11.5px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(42, 53, 64, 0.6);
+}
+.change-row:last-child { border-bottom: none; }
+.c-name { width: 62px; color: #dfe7ee; font-weight: 600; }
+.c-item { color: #8fa1b0; }
+.c-item.up { color: #d8614a; }
+.c-item.down { color: #4ad89a; }
+
+.count.urgent { background: rgba(216, 97, 74, 0.2); color: #d8614a; }
+
+.precision-more { margin-top: 10px; }
+.precision-more summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #8fa1b0;
+  outline: none;
+}
+.precision-more summary:hover { color: #4aa8d8; }
+.precision-more .precision-grid { margin-top: 8px; }
 
 .layout {
   flex: 1;

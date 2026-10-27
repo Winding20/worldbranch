@@ -80,6 +80,11 @@ def create_app(overrides: dict | None = None) -> Flask:
         return jsonify({"error": str(err)}), 400
 
     from .ai import LLMError, ProviderNotConfigured
+    from .engine.decisions import DecisionError
+
+    @app.errorhandler(DecisionError)
+    def handle_decision_error(err):
+        return jsonify({"error": str(err)}), 400
 
     @app.errorhandler(ProviderNotConfigured)
     def handle_no_provider(err):

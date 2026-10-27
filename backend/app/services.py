@@ -1,4 +1,4 @@
-"""世界与分支的服务层：创建、派生、查询。
+﻿"""世界与分支的服务层：创建、派生、查询。
 
 放在引擎之外，避免引擎直接依赖 HTTP 或命令行。
 """
@@ -13,10 +13,12 @@ from sqlalchemy.orm import Session
 
 from .models import (
     Branch,
+    Decision,
     Faction,
     FactionState,
     Region,
     RegionState,
+    RelationState,
     SimEvent,
     World,
 )
@@ -88,6 +90,16 @@ def create_branch(
                 military=faction.military,
             )
         )
+    for relation in world.relations:
+        session.add(
+            RelationState(
+                branch_id=branch.id,
+                from_key=relation.from_key,
+                to_key=relation.to_key,
+                kind=relation.kind,
+                value=relation.value,
+            )
+        )
     session.flush()
     return branch
 
@@ -145,6 +157,18 @@ def fork_branch(
                 treasury=state.treasury,
                 legitimacy=state.legitimacy,
                 military=state.military,
+            )
+        )
+    for relation in session.scalars(
+        select(RelationState).where(RelationState.branch_id == source.id)
+    ):
+        session.add(
+            RelationState(
+                branch_id=branch.id,
+                from_key=relation.from_key,
+                to_key=relation.to_key,
+                kind=relation.kind,
+                value=relation.value,
             )
         )
 

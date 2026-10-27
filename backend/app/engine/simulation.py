@@ -1,4 +1,4 @@
-﻿"""模拟引擎：按规则推进时间、更新状态、生成事件。
+"""模拟引擎：按规则推进时间、更新状态、生成事件。
 
 引擎只负责「算」，不做任何叙述性生成；AI 分析属于后续层。
 所有随机都来自按 (seed, tick) 派生的独立随机源，保证同一分支可复现。
@@ -19,12 +19,13 @@ from ..models import (
     Branch,
     FactionState,
     RegionState,
+    RelationState,
     SimEvent,
     Snapshot,
     TradeLink,
 )
 from ..utils import format_date
-from . import rules
+from . import decisions, rules
 
 #: 精度档位 -> (最低事件等级, 是否生成局部事件, 灾害骰子次数)
 PRECISION_PROFILE: dict[str, tuple[int, bool, int]] = {
@@ -56,6 +57,11 @@ class TickReport:
     events: list[dict[str, Any]] = field(default_factory=list)
     region_states: list[dict[str, Any]] = field(default_factory=list)
     faction_states: list[dict[str, Any]] = field(default_factory=list)
+    #: 推进前后的差异摘要（只包含有变化的地区）
+    changes: list[dict[str, Any]] = field(default_factory=list)
+    #: 本次推进后新出现的决策
+    decisions: list[dict[str, Any]] = field(default_factory=list)
+    relations: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -67,6 +73,9 @@ class TickReport:
             "events": self.events,
             "region_states": self.region_states,
             "faction_states": self.faction_states,
+            "changes": self.changes,
+            "decisions": self.decisions,
+            "relations": self.relations,
         }
 
 
@@ -114,6 +123,10 @@ class SimulationEngine:
             from_date=from_date,
             to_date=from_date,
         )
+        #: 推进前后的差异，用于给用户"这一个月到底变了什么"
+        before = {
+            r.region_key: (r.grain_stock, r.price_index, r.unrest) for r in regions
+        }
 
         # 性能要点：远程数据库每次往返约 30-40ms，逐 tick 写库会让「推进 24 个月」
         # 变成上百次往返（实测 4.4 秒）。这里把事件与快照全部在内存里攒成
@@ -173,6 +186,46 @@ class SimulationEngine:
             }
             for f in factions.values()
         ]
+
+        # 变化摘要：只报"明显有变化"的项，避免每期都刷七个道
+        for region in regions:
+            g0, p0, u0 = before.get(region.region_key, (0.0, 1.0, 0.0))
+            d_grain = region.grain_stock - g0
+            d_price = region.price_index - p0
+            d_unrest = region.unrest - u0
+            grain_ratio = abs(d_grain) / max(g0, 1.0)
+            if grain_ratio < 0.02 and abs(d_price) < 0.02 and abs(d_unrest) < 0.02:
+                continue
+            report.changes.append(
+                {
+                    "region_key": region.region_key,
+                    "name": region.name,
+                    "grain_delta": round(d_grain, 1),
+                    "price_before": round(p0, 3),
+                    "price_after": round(region.price_index, 3),
+                    "price_delta": round(d_price, 3),
+                    "unrest_before": round(u0, 3),
+                    "unrest_after": round(region.unrest, 3),
+                    "unrest_delta": round(d_unrest, 3),
+                }
+            )
+
+        # 势力关系自然漂移：藩镇不会永远听话
+        relations = {
+            r.from_key: r
+            for r in self.session.scalars(
+                select(RelationState).where(RelationState.branch_id == branch.id)
+            )
+        }
+        for rel in relations.values():
+            if rel.kind == "allegiance":
+                rel.value = max(rel.value - 0.004 * months, -1.0)
+
+        raised = decisions.raise_decisions(
+            self.session, branch, regions, factions, relations
+        )
+        report.decisions = [d.to_dict() for d in raised]
+        report.relations = [r.snapshot() for r in relations.values()]
 
         with self.session.no_autoflush:
             if pending_events:
@@ -244,6 +297,8 @@ class SimulationEngine:
                 )
 
             if shock_kind:
+                # 灾情不只减产，还会让地方人心浮动——这是后续"赈济"决策的引信
+                region.unrest = min(region.unrest + 0.08, 1.0)
                 self._emit(
                     branch,
                     report,
@@ -372,6 +427,17 @@ class SimulationEngine:
             faction.treasury = treasury
             faction.legitimacy = legitimacy
             faction.military = military
+
+            # 府库见底时，势力会自行在辖区加征——这会把压力转成民怨。
+            # 没有这条，任何势力都会在几十年后欠出天文数字。
+            own_regions = [r for r in regions if r.faction_key == key]
+            if treasury < -200_000 and own_regions:
+                squeezed = min(-treasury * 0.15, 400_000)
+                faction.treasury += squeezed
+                for region in own_regions:
+                    region.tax_rate = min(region.tax_rate + 0.004, 0.3)
+                    region.unrest = min(region.unrest + 0.012, 1.0)
+
             if deficit:
                 self._emit(
                     branch,

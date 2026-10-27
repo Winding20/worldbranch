@@ -6,6 +6,7 @@ import EventFeed from "./components/EventFeed.vue";
 import RegionDetail from "./components/RegionDetail.vue";
 import BranchCompare from "./components/BranchCompare.vue";
 import AiPanel from "./components/AiPanel.vue";
+import DecisionPanel from "./components/DecisionPanel.vue";
 
 const WORLD = "tang_750";
 const PRECISIONS = [
@@ -28,6 +29,11 @@ const error = ref("");
 const view = ref("sim");
 const units = ref([]);
 const manualScope = ref(false);
+const decisions = ref([]);
+const relations = ref([]);
+const changes = ref([]);
+const scenario = ref(null);
+const lastReport = ref(null);
 
 const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
@@ -89,12 +95,20 @@ async function ensureBranch() {
   });
 }
 
+async function loadDecisions() {
+  if (!branch.value) return;
+  decisions.value = await api.decisions(branch.value.id);
+  relations.value = await api.relations(branch.value.id);
+}
+
 async function boot() {
   try {
+    scenario.value = (await api.world(WORLD)).scenario || null;
     branch.value = await ensureBranch();
     await loadState();
     await loadEvents();
     await loadView();
+    await loadDecisions();
   } catch (err) {
     error.value = `初始化失败：${err.message}`;
   }
@@ -106,11 +120,33 @@ async function advance(months) {
   message.value = "正在按规则推进…";
   try {
     const report = await api.advance(branch.value.id, months, precision.value);
+    lastReport.value = report;
+    changes.value = report.changes || [];
     await loadState();
     await loadEvents();
-    message.value = `已推进 ${report.months} 个月（${report.from_date} → ${report.to_date}），期间产生 ${report.event_count} 条事件。`;
+    await loadDecisions();
+    const bits = [`已推进 ${report.months} 个月（${report.from_date} → ${report.to_date}）`];
+    if (report.event_count) bits.push(`新事件 ${report.event_count} 条`);
+    if (report.decisions?.length) bits.push(`有 ${report.decisions.length} 件事等你决定`);
+    message.value = bits.join("，") + "。";
   } catch (err) {
     message.value = `推进失败：${err.message}`;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function onResolve(decision, option) {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await api.resolveDecision(branch.value.id, decision.id, option.key);
+    message.value = `已决断：${decision.title} → ${option.label}`;
+    await loadState();
+    await loadEvents();
+    await loadDecisions();
+  } catch (err) {
+    message.value = `决断失败：${err.message}`;
   } finally {
     busy.value = false;
   }
@@ -218,18 +254,33 @@ onMounted(boot);
     </section>
 
     <aside class="side-panel">
+      <div v-if="scenario" class="panel-block brief">
+        <div class="brief-role">{{ scenario.role }}</div>
+        <p class="brief-goal">{{ scenario.goal }}</p>
+        <details class="brief-more">
+          <summary>当前局面</summary>
+          <p class="brief-text">{{ scenario.briefing }}</p>
+          <ul class="brief-list">
+            <li v-for="p in scenario.pressures" :key="p">{{ p }}</li>
+          </ul>
+        </details>
+      </div>
+
       <div class="panel-block">
-        <h2>模拟控制</h2>
-        <div class="precision-grid">
-          <button
-            v-for="p in PRECISIONS"
-            :key="p.key"
-            :class="{ active: precision === p.key }"
-            @click="setPrecision(p.key)"
-          >
-            <b>{{ p.name }}</b><span>{{ p.desc }}</span>
-          </button>
-        </div>
+        <h2>
+          待决事项
+          <span v-if="decisions.length" class="count urgent">{{ decisions.length }}</span>
+        </h2>
+        <DecisionPanel
+          :decisions="decisions"
+          :relations="relations"
+          :busy="busy"
+          @resolve="onResolve"
+        />
+      </div>
+
+      <div class="panel-block">
+        <h2>推进时间</h2>
         <div class="advance-row">
           <button class="advance" :disabled="busy" @click="advance(1)">推进 1 月</button>
           <button class="advance" :disabled="busy" @click="advance(3)">推进 3 月</button>
@@ -237,6 +288,34 @@ onMounted(boot);
         </div>
         <p class="hint">{{ message }}</p>
         <p v-if="error" class="hint error">{{ error }}</p>
+        <details class="precision-more">
+          <summary>模拟精度：{{ PRECISIONS.find((p) => p.key === precision)?.name }}</summary>
+          <div class="precision-grid">
+            <button
+              v-for="p in PRECISIONS"
+              :key="p.key"
+              :class="{ active: precision === p.key }"
+              @click="setPrecision(p.key)"
+            >
+              <b>{{ p.name }}</b><span>{{ p.desc }}</span>
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <div v-if="changes.length" class="panel-block">
+        <h2>本期变化</h2>
+        <div class="changes">
+          <div v-for="c in changes" :key="c.region_key" class="change-row">
+            <span class="c-name">{{ c.name }}</span>
+            <span class="c-item" :class="c.price_delta > 0 ? 'up' : 'down'">
+              粮价 {{ c.price_before.toFixed(2) }} → {{ c.price_after.toFixed(2) }}
+            </span>
+            <span v-if="Math.abs(c.unrest_delta) >= 0.01" class="c-item" :class="c.unrest_delta > 0 ? 'up' : 'down'">
+              民变 {{ c.unrest_delta > 0 ? "+" : "" }}{{ c.unrest_delta.toFixed(2) }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div class="panel-block">

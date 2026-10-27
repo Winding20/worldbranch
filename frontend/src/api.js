@@ -72,4 +72,14 @@ export const api = {
       `/api/ai/branches/${branchId}/material` + (eventId ? `?event_id=${eventId}` : "")
     ),
   knowledge: (world) => request(`/api/ai/worlds/${world}/knowledge`),
+
+  // ---- 决策 ----
+  decisions: (id, history = false) =>
+    request(`/api/branches/${id}/decisions${history ? "?history=1" : ""}`),
+  resolveDecision: (id, decisionId, option) =>
+    request(`/api/branches/${id}/decisions/${decisionId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ option }),
+    }),
+  relations: (id) => request(`/api/branches/${id}/relations`),
 };

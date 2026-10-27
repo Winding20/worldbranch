@@ -54,6 +54,8 @@ class World(Base):
     start_date: Mapped[dt.date] = mapped_column(Date)
     #: 资料与可信度标注：{"sources": [...], "notes": [...]}
     provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: 开局情境：{"role": "...", "goal": "...", "briefing": "...", "pressures": [...]}
+    scenario: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
 
     regions: Mapped[list["Region"]] = relationship(
@@ -63,6 +65,9 @@ class World(Base):
         back_populates="world", cascade="all, delete-orphan"
     )
     trade_links: Mapped[list["TradeLink"]] = relationship(
+        back_populates="world", cascade="all, delete-orphan"
+    )
+    relations: Mapped[list["FactionRelation"]] = relationship(
         back_populates="world", cascade="all, delete-orphan"
     )
 
@@ -77,6 +82,7 @@ class World(Base):
             "region_count": len(self.regions),
             "faction_count": len(self.factions),
             "provenance": self.provenance or {},
+            "scenario": self.scenario or {},
         }
 
 
@@ -159,6 +165,109 @@ class TradeLink(Base):
     loss: Mapped[float] = mapped_column(Float, default=0.08)
 
     world: Mapped[World] = relationship(back_populates="trade_links")
+
+
+class FactionRelation(Base):
+    """势力之间的关系模板（-1 敌对 … 0 中立 … +1 同盟）。
+
+    设计文档要求"国家之间应有真实的数据关系"：这里是政治关系的数据落点，
+    决策的后果会改变它，它又会反过来影响后续事件的触发。
+    """
+
+    __tablename__ = "faction_relations"
+    __table_args__ = (
+        UniqueConstraint(
+            "world_id", "from_key", "to_key", "kind", name="uq_relation_world_pair"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    from_key: Mapped[str] = mapped_column(String(64), index=True)
+    to_key: Mapped[str] = mapped_column(String(64), index=True)
+    #: 关系类型：allegiance（臣属）/ hostility（敌对）/ alliance（同盟）
+    kind: Mapped[str] = mapped_column(String(24), default="allegiance")
+    value: Mapped[float] = mapped_column(Float, default=0.0)
+
+    world: Mapped[World] = relationship(back_populates="relations")
+
+
+class RelationState(Base):
+    """分支内的关系当前值。"""
+
+    __tablename__ = "relation_states"
+    __table_args__ = (
+        UniqueConstraint(
+            "branch_id", "from_key", "to_key", "kind", name="uq_relationstate_pair"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(
+        ForeignKey("branches.id", ondelete="CASCADE"), index=True
+    )
+    from_key: Mapped[str] = mapped_column(String(64), index=True)
+    to_key: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(24), default="allegiance")
+    value: Mapped[float] = mapped_column(Float, default=0.0)
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "from_key": self.from_key,
+            "to_key": self.to_key,
+            "kind": self.kind,
+            "value": round(self.value, 3),
+        }
+
+
+class Decision(Base):
+    """摆在用户面前的一道抉择。
+
+    这是"世界自己产生问题"的载体：引擎在满足条件时抛出决策，
+    用户从带后果的选项里挑一个，选项结果立即写回世界并留下事件。
+    """
+
+    __tablename__ = "decisions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(
+        ForeignKey("branches.id", ondelete="CASCADE"), index=True
+    )
+    game_date: Mapped[dt.date] = mapped_column(Date, index=True)
+    tick_index: Mapped[int] = mapped_column(Integer, default=0)
+
+    #: warlord_supply / famine_relief / border_raid / cut_warlord
+    kind: Mapped[str] = mapped_column(String(32), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")
+    #: 为什么会冒出这道题（通常指向触发它的事件）
+    trigger_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    #: [{"key": "...", "label": "...", "detail": "...", "effects": {...}}]
+    options: Mapped[list[Any]] = mapped_column(JSON, default=list)
+    #: pending / resolved / expired
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    resolved_option: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    resolved_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+    #: 决议产生的事件 id，后续事件可以挂在它下面
+    result_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "game_date": format_date(self.game_date),
+            "tick_index": self.tick_index,
+            "kind": self.kind,
+            "title": self.title,
+            "description": self.description,
+            "trigger_event_id": self.trigger_event_id,
+            "options": self.options or [],
+            "status": self.status,
+            "resolved_option": self.resolved_option,
+            "result_event_id": self.result_event_id,
+        }
 
 
 # --------------------------------------------------------------------------- #

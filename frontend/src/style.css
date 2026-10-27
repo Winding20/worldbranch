@@ -121,6 +121,54 @@ html, body {
   padding: 2px 0;
 }
 
+/* ---------------------------- 开局情境 ---------------------------- */
+.brief { background: linear-gradient(180deg, rgba(74, 168, 216, 0.09), transparent); }
+.brief-role {
+  font-size: 15px;
+  font-weight: 700;
+  color: #8fc9e6;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.brief-goal { margin: 0 0 8px; font-size: 12px; line-height: 1.7; color: #dfe7ee; }
+.brief-more summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #8fa1b0;
+  outline: none;
+}
+.brief-more summary:hover { color: #4aa8d8; }
+.brief-text { margin: 8px 0; font-size: 11.5px; line-height: 1.75; color: #c6d6e2; }
+.brief-list { margin: 0; padding-left: 18px; font-size: 11px; color: #8fa1b0; line-height: 1.8; }
+
+/* ---------------------------- 变化摘要 ---------------------------- */
+.changes { display: flex; flex-direction: column; gap: 4px; }
+.change-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11.5px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(42, 53, 64, 0.6);
+}
+.change-row:last-child { border-bottom: none; }
+.c-name { width: 62px; color: #dfe7ee; font-weight: 600; }
+.c-item { color: #8fa1b0; }
+.c-item.up { color: #d8614a; }
+.c-item.down { color: #4ad89a; }
+
+.count.urgent { background: rgba(216, 97, 74, 0.2); color: #d8614a; }
+
+.precision-more { margin-top: 10px; }
+.precision-more summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #8fa1b0;
+  outline: none;
+}
+.precision-more summary:hover { color: #4aa8d8; }
+.precision-more .precision-grid { margin-top: 8px; }
+
 .layout {
   flex: 1;
   display: grid;

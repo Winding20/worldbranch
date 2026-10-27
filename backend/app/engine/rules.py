@@ -1,4 +1,4 @@
-﻿"""模拟规则：纯函数，不碰数据库、不碰随机数。
+"""模拟规则：纯函数，不碰数据库、不碰随机数。
 
 把「条件变化后会发生什么」写成可执行、可单测的公式，
 是设计文档里「模拟规则」这一层的落地。
@@ -44,8 +44,10 @@ UNREST_DECAY = 0.06
 #: 粮价高于该值开始累积民变
 UNREST_PRICE_THRESHOLD = 1.6
 
-#: 军费占财政的比重
-MILITARY_UPKEEP_RATIO = 0.35
+#: 每名军士每月的军费（贯）。募兵制下军队是财政最大的开销。
+MILITARY_UPKEEP_RATIO = 2.0
+#: 百官俸禄、宫廷与行政等固定开销占岁入的比重
+COURT_OVERHEAD_RATIO = 0.3
 #: 财政赤字对合法性的削弱
 LEGITIMACY_PER_DEFICIT = 0.0004
 
@@ -148,9 +150,14 @@ def step_faction(
     military: float,
     revenue: float,
 ) -> tuple[float, float, float]:
-    """势力单月结算，返回 (treasury, legitimacy, military)。"""
+    """势力单月结算，返回 (treasury, legitimacy, military)。
+
+募兵制下军费是财政的最大项，再加上百官俸禄与宫廷开销，
+岁入必须覆盖这两块才可能有结余——这也正是唐廷"看着富、其实紧"的原因。
+"""
     upkeep = military * MILITARY_UPKEEP_RATIO
-    net = treasury + revenue - upkeep
+    overhead = revenue * COURT_OVERHEAD_RATIO
+    net = treasury + revenue - overhead - upkeep
     if net < 0:
         legitimacy = max(legitimacy - abs(net) * LEGITIMACY_PER_DEFICIT, 0.0)
     else:

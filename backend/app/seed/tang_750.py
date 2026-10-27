@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..engine.rules import GRAIN_PER_CAPITA_MONTH, SEASON_FACTOR
-from ..models import Faction, Region, TradeLink, World
+from ..models import Faction, FactionRelation, Region, TradeLink, World
 
 WORLD_KEY = "tang_750"
 START_DATE = dt.date(750, 1, 1)
@@ -121,6 +121,29 @@ TRADE_PAIRS: list[tuple[str, str, float]] = [
 #: 全年 12 个月的农事强度之和，用于把「年产能力」换算成「月产基数」
 SEASON_SUM = sum(SEASON_FACTOR)
 
+#: 势力关系：以唐廷为中心的臣属关系。value 越高越听话。
+RELATIONS: list[dict[str, Any]] = [
+    {"from_key": "fanzhen", "to_key": "tang", "kind": "allegiance", "value": 0.34},
+]
+
+#: 开局情境：用户扮演唐廷，这是"我在干什么"的答案。
+SCENARIO: dict[str, Any] = {
+    "role": "唐廷 · 天宝九年",
+    "goal": "撑过未来五年：不让藩镇坐大，不让府库见底，不让民变成势。",
+    "briefing": (
+        "天宝九年（750 年），唐朝表面承平，内里三处吃紧。"
+        "河北三镇拥兵自重、赋税自留；朝廷府库看似充裕，边军粮饷却占去大半；"
+        "江淮一旦水旱，漕粮就会断。五年之后，天下人都知道发生了什么——"
+        "而这一次，你可以选择不重蹈覆辙。"
+    ),
+    "pressures": [
+        "河北藩镇听调不听宣，军饷仍要朝廷供给",
+        "边军粮饷占去朝廷岁入的大半",
+        "江淮水旱直接威胁漕粮命脉",
+    ],
+    "watch": ["河北道民变指数", "河北藩镇臣属度", "朝廷府库", "河北道粮价指数"],
+}
+
 
 def derive_region_values(item: dict[str, Any]) -> dict[str, float]:
     """由人口、丰度与存粮月数推导引擎所需的两个量。
@@ -145,6 +168,7 @@ def seed(session: Session) -> World:
         ),
         start_date=START_DATE,
         provenance=SOURCE_NOTES,
+        scenario=SCENARIO,
     )
     session.add(world)
     session.flush()
@@ -203,6 +227,18 @@ def seed(session: Session) -> World:
                     loss=0.08,
                 )
             )
+
+    # 势力关系：藩镇对朝廷的臣属度
+    for item in RELATIONS:
+        session.add(
+            FactionRelation(
+                world_id=world.id,
+                from_key=item["from_key"],
+                to_key=item["to_key"],
+                kind=item["kind"],
+                value=item["value"],
+            )
+        )
 
     session.flush()
     return world

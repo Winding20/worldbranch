@@ -80,6 +80,9 @@ const checks = {
   "出现地区名": /关内道|河南道|河北道/.test(body),
   "事件流已渲染": body.includes("事件流"),
   "出现模拟控制": body.includes("推进"),
+  "出现开局情境": /唐廷 · 天宝九年/.test(body),
+  "出现待决事项面板": body.includes("待决事项"),
+  "出现臣属度": body.includes("臣属度"),
   "无运行时错误": errors.length === 0,
 };
 
