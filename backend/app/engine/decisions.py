@@ -1,4 +1,4 @@
-﻿"""决策：世界主动向用户提出的问题。
+"""决策：世界主动向用户提出的问题。
 
 设计目的：让"用户不知道该干什么"变成"世界告诉你要决定什么"。
 每道决策都带 2–3 个选项，每个选项写明代价与后果，选完立即生效并留下事件。
@@ -410,6 +410,8 @@ def resolve_decision(
         raise DecisionError(f"没有这个选项: {option_key}")
 
     effects: dict[str, Any] = option.get("effects") or {}
+    #: 实际发生的变化，用于给用户"选完之后到底怎么了"的即时反馈
+    applied: list[dict[str, Any]] = []
 
     tang = session.scalar(
         select(FactionState).where(
@@ -418,9 +420,27 @@ def resolve_decision(
     )
     if tang is not None:
         if effects.get("treasury"):
+            before = tang.treasury
             tang.treasury += float(effects["treasury"])
+            applied.append(
+                {
+                    "label": "朝廷府库",
+                    "before": round(before, 0),
+                    "after": round(tang.treasury, 0),
+                    "unit": "贯",
+                }
+            )
         if effects.get("legitimacy"):
+            before = tang.legitimacy
             tang.legitimacy = min(max(tang.legitimacy + float(effects["legitimacy"]), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": "朝廷威望",
+                    "before": round(before, 3),
+                    "after": round(tang.legitimacy, 3),
+                    "unit": "",
+                }
+            )
 
     for key, delta in (effects.get("relation") or {}).items():
         rel = session.scalar(
@@ -430,7 +450,16 @@ def resolve_decision(
             )
         )
         if rel is not None:
+            before = rel.value
             rel.value = min(max(rel.value + float(delta), -1.0), 1.0)
+            applied.append(
+                {
+                    "label": "河北藩镇臣属度",
+                    "before": round(before, 3),
+                    "after": round(rel.value, 3),
+                    "unit": "",
+                }
+            )
 
     for key, delta in (effects.get("unrest") or {}).items():
         region = session.scalar(
@@ -439,7 +468,16 @@ def resolve_decision(
             )
         )
         if region is not None:
+            before = region.unrest
             region.unrest = min(max(region.unrest + float(delta), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": f"{region.name}民变",
+                    "before": round(before, 3),
+                    "after": round(region.unrest, 3),
+                    "unit": "",
+                }
+            )
 
     for key, delta in (effects.get("grain") or {}).items():
         region = session.scalar(
@@ -448,7 +486,16 @@ def resolve_decision(
             )
         )
         if region is not None:
+            before = region.grain_stock
             region.grain_stock = max(region.grain_stock + float(delta), 0.0)
+            applied.append(
+                {
+                    "label": f"{region.name}存粮",
+                    "before": round(before, 0),
+                    "after": round(region.grain_stock, 0),
+                    "unit": "石",
+                }
+            )
 
     for key, delta in (effects.get("tax") or {}).items():
         region = session.scalar(
@@ -457,7 +504,16 @@ def resolve_decision(
             )
         )
         if region is not None:
+            before = region.tax_rate
             region.tax_rate = min(max(region.tax_rate + float(delta), 0.0), 0.5)
+            applied.append(
+                {
+                    "label": f"{region.name}税率",
+                    "before": round(before, 3),
+                    "after": round(region.tax_rate, 3),
+                    "unit": "",
+                }
+            )
 
     event = SimEvent(
         branch_id=branch.id,
@@ -476,7 +532,7 @@ def resolve_decision(
             if decision.trigger_event_id
             else [{"rule": "decision", "kind": decision.kind}]
         ),
-        metrics={"decision_kind": decision.kind, "option": option_key},
+        metrics={"decision_kind": decision.kind, "option": option_key, "applied": applied},
     )
     session.add(event)
     session.flush()

@@ -82,8 +82,14 @@ def main() -> int:
     history = call(f"/api/branches/{bid}/decisions?history=1")
     print(f"\n剩余待决：{len(remaining)} 件；历史决策 {len(history)} 件")
     for d in history:
-        chosen = next(o for o in d["options"] if o["key"] == d["resolved_option"])
-        print(f"  · {d['game_date']} {d['title']} → {chosen['label']}")
+        if d["status"] != "resolved":
+            print(f"  · {d['game_date']} {d['title']}（仍待决）")
+            continue
+        chosen = next(
+            (o for o in d["options"] if o["key"] == d["resolved_option"]), None
+        )
+        label = chosen["label"] if chosen else d["resolved_option"]
+        print(f"  · {d['game_date']} {d['title']} → {label}")
     return 0
 
 

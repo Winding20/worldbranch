@@ -199,6 +199,30 @@ def test_advance_report_includes_changes(db_session):
     assert "name" in sample and "price_delta" in sample
 
 
+def test_resolve_returns_applied_effects(db_session):
+    """选完之后要能看到"到底变了多少"，而不只是"已决断"。"""
+    branch = _branch(db_session)
+    fanzhen = db_session.scalar(
+        select(FactionState).where(
+            FactionState.branch_id == branch.id, FactionState.faction_key == "fanzhen"
+        )
+    )
+    fanzhen.treasury = -400_000
+    db_session.flush()
+
+    SimulationEngine(db_session).advance(branch, months=1)
+    decision = pending_decisions(db_session, branch.id)[0]
+    event = resolve_decision(db_session, branch, decision, "refuse")
+    db_session.flush()
+
+    applied = event.metrics.get("applied")
+    assert applied, "决议事件必须记录实际变化"
+    labels = {item["label"] for item in applied}
+    assert "河北藩镇臣属度" in labels
+    for item in applied:
+        assert item["before"] != item["after"]
+
+
 def test_relation_description_is_human_readable(db_session):
     branch = _branch(db_session)
     rows = describe_relation(db_session, branch.id)

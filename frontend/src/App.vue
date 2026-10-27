@@ -36,6 +36,7 @@ const changes = ref([]);
 const scenario = ref(null);
 const lastReport = ref(null);
 const ending = ref(null);
+const decisionResult = ref(null);
 
 const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
@@ -153,8 +154,13 @@ async function onResolve(decision, option) {
   if (busy.value) return;
   busy.value = true;
   try {
-    await api.resolveDecision(branch.value.id, decision.id, option.key);
+    const result = await api.resolveDecision(branch.value.id, decision.id, option.key);
     message.value = `已决断：${decision.title} → ${option.label}`;
+    decisionResult.value = {
+      title: decision.title,
+      option: option.label,
+      applied: result.event?.metrics?.applied || [],
+    };
     await loadState();
     await loadEvents();
     await loadDecisions();
@@ -270,6 +276,25 @@ onMounted(boot);
       <div v-if="ending" class="panel-block">
         <h2>五年之后</h2>
         <EndingCard :ending="ending" />
+      </div>
+
+      <div v-if="decisionResult" class="panel-block">
+        <h2>刚才的决断</h2>
+        <div class="result-card">
+          <div class="r-title">{{ decisionResult.title }} → {{ decisionResult.option }}</div>
+          <div v-if="!decisionResult.applied.length" class="r-empty">这次选择没有立刻改变可量化的指标。</div>
+          <div v-for="item in decisionResult.applied" :key="item.label" class="r-row">
+            <span class="r-label">{{ item.label }}</span>
+            <span class="r-value">
+              {{ Number(item.before).toLocaleString() }} →
+              <b :class="item.after < item.before ? 'down' : item.after > item.before ? 'up' : ''">
+                {{ Number(item.after).toLocaleString() }}
+              </b>
+              {{ item.unit }}
+            </span>
+          </div>
+          <button class="link-btn" @click="decisionResult = null">收起</button>
+        </div>
       </div>
 
       <div v-if="scenario" class="panel-block brief">

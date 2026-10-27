@@ -28,6 +28,10 @@
 | 同一 seed 可复现 | ✅ | 引擎按 `(seed, tick)` 派生随机源，有测试 |
 | 分支隔离与对比 | ✅ | `fork_branch`、`compare_branches` |
 | 用户干预 | ✅ | `apply_action`（歉收/赈济/税改） |
+| 开局情境与角色 | ✅ | `World.scenario`、侧栏情境卡 |
+| 世界主动抛出决策 | ✅ | `engine/decisions.py`，六类决策带后果选项 |
+| 推进后变化摘要 | ✅ | `TickReport.changes` |
+| 五年结局评估 | ✅ | `engine/ending.py` |
 | BYOK：用户自带模型 | ✅ | `ai/providers.py`，Key 不落库 |
 
 仍未完成、且不在第一阶段范围内的：用户自建世界、创意工坊、多人协作、人物级模拟。
