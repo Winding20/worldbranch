@@ -8,6 +8,7 @@ from sqlalchemy import select
 from ..app_factory import get_db
 from ..engine import SimulationEngine
 from ..engine.ending import evaluate_ending
+from ..engine.history import history_status
 from ..engine.decisions import (
     DecisionError,
     decision_history,
@@ -67,6 +68,14 @@ def relations_route(branch_id: int):
     with get_db().session() as session:
         get_branch(session, branch_id)
         return jsonify(describe_relation(session, branch_id))
+
+
+@bp.get("/<int:branch_id>/history")
+def history_route(branch_id: int):
+    """这条时间线上，哪些史实应验、哪些改道。"""
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        return jsonify(history_status(session, branch_id))
 
 
 @bp.get("/<int:branch_id>/ending")

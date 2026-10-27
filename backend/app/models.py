@@ -70,6 +70,15 @@ class World(Base):
     relations: Mapped[list["FactionRelation"]] = relationship(
         back_populates="world", cascade="all, delete-orphan"
     )
+    characters: Mapped[list["Character"]] = relationship(
+        back_populates="world", cascade="all, delete-orphan"
+    )
+    armies: Mapped[list["Army"]] = relationship(
+        back_populates="world", cascade="all, delete-orphan"
+    )
+    historical_events: Mapped[list["HistoricalEvent"]] = relationship(
+        back_populates="world", cascade="all, delete-orphan"
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -139,6 +148,168 @@ class Faction(Base):
     military: Mapped[float] = mapped_column(Float, default=0.0)
 
     world: Mapped[World] = relationship(back_populates="factions")
+
+
+# --------------------------------------------------------------------------- #
+# 唐史推演：人物、军队、史实事件
+# --------------------------------------------------------------------------- #
+class Character(Base):
+    """历史人物模板。
+
+    唐史推演器的核心资产是"人"：谁在什么位置、手里有多少兵、
+    对朝廷有几分忠、有多大野心。这些决定了同一道诏书在不同时期的效果。
+    """
+
+    __tablename__ = "characters"
+    __table_args__ = (UniqueConstraint("world_id", "key", name="uq_character_world_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    key: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(64))
+    #: 字/别名，用于显示
+    alias: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: emperor / minister / general / eunuch / rebel
+    role: Mapped[str] = mapped_column(String(24), default="general")
+    office: Mapped[str] = mapped_column(String(96), default="")
+
+    born: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    died: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    #: 0–1：军事/行政综合能力
+    ability: Mapped[float] = mapped_column(Float, default=0.5)
+    #: 0–1：对朝廷的忠诚
+    loyalty: Mapped[float] = mapped_column(Float, default=0.5)
+    #: 0–1：自立倾向
+    ambition: Mapped[float] = mapped_column(Float, default=0.2)
+
+    location_region_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    alive: Mapped[bool] = mapped_column(default=True)
+    bio: Mapped[str] = mapped_column(Text, default="")
+    #: 出处，例如《旧唐书·安禄山传》
+    source: Mapped[str] = mapped_column(String(200), default="")
+
+    world: Mapped[World] = relationship(back_populates="characters")
+
+
+class Army(Base):
+    """军队模板：在哪、谁带、多少人、士气如何。"""
+
+    __tablename__ = "armies"
+    __table_args__ = (UniqueConstraint("world_id", "key", name="uq_army_world_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    key: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(96))
+    faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    commander_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    region_key: Mapped[str] = mapped_column(String(64), default="")
+
+    troops: Mapped[int] = mapped_column(Integer, default=0)
+    #: 0–1
+    morale: Mapped[float] = mapped_column(Float, default=0.6)
+    #: 0–1：粮饷充足程度
+    supply: Mapped[float] = mapped_column(Float, default=0.6)
+
+    world: Mapped[World] = relationship(back_populates="armies")
+
+
+class HistoricalEvent(Base):
+    """史实事件模板。
+
+    每个事件带有"触发条件"：条件满足才会发生。用户如果改变了前提，
+    历史就不会按原样走——这正是推演器要展示的东西。
+    """
+
+    __tablename__ = "historical_events"
+    __table_args__ = (
+        UniqueConstraint("world_id", "key", name="uq_histevent_world_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    key: Mapped[str] = mapped_column(String(64), index=True)
+    #: 史实发生的年月
+    date: Mapped[dt.date] = mapped_column(Date, index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")
+    #: 分类：rebellion / battle / politics / court / disaster
+    category: Mapped[str] = mapped_column(String(24), default="politics")
+    #: 发生所需条件，例如 {"army_at": ["fanyang", "luoyang"], "region_lost": "luoyang"}
+    conditions: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: 发生后的效果，例如 {"lose_region": "luoyang", "treasury": -200000}
+    effects: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: 若条件不成立，用这段文字说明"历史在这里改道了"
+    divergence_note: Mapped[str] = mapped_column(Text, default="")
+    source: Mapped[str] = mapped_column(String(200), default="")
+
+    world: Mapped[World] = relationship(back_populates="historical_events")
+
+
+class CharacterState(Base):
+    """分支内的人物状态。"""
+
+    __tablename__ = "character_states"
+    __table_args__ = (
+        UniqueConstraint("branch_id", "character_key", name="uq_charstate_branch_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(
+        ForeignKey("branches.id", ondelete="CASCADE"), index=True
+    )
+    character_key: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(64))
+    faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    office: Mapped[str] = mapped_column(String(96), default="")
+    loyalty: Mapped[float] = mapped_column(Float, default=0.5)
+    ability: Mapped[float] = mapped_column(Float, default=0.5)
+    location_region_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    alive: Mapped[bool] = mapped_column(default=True)
+
+
+class ArmyState(Base):
+    """分支内的军队状态。"""
+
+    __tablename__ = "army_states"
+    __table_args__ = (
+        UniqueConstraint("branch_id", "army_key", name="uq_armystate_branch_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(
+        ForeignKey("branches.id", ondelete="CASCADE"), index=True
+    )
+    army_key: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(96))
+    faction_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    commander_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    region_key: Mapped[str] = mapped_column(String(64), default="")
+    troops: Mapped[int] = mapped_column(Integer, default=0)
+    morale: Mapped[float] = mapped_column(Float, default=0.6)
+    supply: Mapped[float] = mapped_column(Float, default=0.6)
+
+
+class HistoricalFire(Base):
+    """记录某个史实事件在某条分支上是否已经发生（或已改道）。"""
+
+    __tablename__ = "historical_fires"
+    __table_args__ = (
+        UniqueConstraint("branch_id", "event_key", name="uq_histfire_branch_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(
+        ForeignKey("branches.id", ondelete="CASCADE"), index=True
+    )
+    event_key: Mapped[str] = mapped_column(String(64), index=True)
+    game_date: Mapped[dt.date] = mapped_column(Date)
+    #: fired（按史实发生）/ diverged（条件不成立，历史改道）
+    status: Mapped[str] = mapped_column(String(16), default="fired")
+    note: Mapped[str] = mapped_column(Text, default="")
 
 
 class TradeLink(Base):

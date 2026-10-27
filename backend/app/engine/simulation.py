@@ -16,7 +16,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import (
+    ArmyState,
     Branch,
+    CharacterState,
     FactionState,
     RegionState,
     RelationState,
@@ -25,7 +27,7 @@ from ..models import (
     TradeLink,
 )
 from ..utils import format_date
-from . import decisions, rules
+from . import decisions, history, rules
 
 #: 精度档位 -> (最低事件等级, 是否生成局部事件, 灾害骰子次数)
 PRECISION_PROFILE: dict[str, tuple[int, bool, int]] = {
@@ -62,6 +64,8 @@ class TickReport:
     #: 本次推进后新出现的决策
     decisions: list[dict[str, Any]] = field(default_factory=list)
     relations: list[dict[str, Any]] = field(default_factory=list)
+    history_fired: list[dict[str, Any]] = field(default_factory=list)
+    history_diverged: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -76,6 +80,8 @@ class TickReport:
             "changes": self.changes,
             "decisions": self.decisions,
             "relations": self.relations,
+            "history_fired": self.history_fired,
+            "history_diverged": self.history_diverged,
         }
 
 
@@ -176,6 +182,21 @@ class SimulationEngine:
         )
         self._blockade = relation_now is not None and relation_now.value < 0
 
+        # 史实事件必须逐月检查：一次推进 12 个月时，若只在结束时判定，
+        # 整年的历史事件都会因为"过期"而被跳过。
+        characters = {
+            c.character_key: c
+            for c in self.session.scalars(
+                select(CharacterState).where(CharacterState.branch_id == branch.id)
+            )
+        }
+        armies = {
+            a.army_key: a
+            for a in self.session.scalars(
+                select(ArmyState).where(ArmyState.branch_id == branch.id)
+            )
+        }
+
         for step in range(months):
             self._tick(branch, regions, factions, step, profile, report, links)
             branch.current_date = add_months(branch.current_date, 1)
@@ -183,6 +204,20 @@ class SimulationEngine:
             pending_snapshots.append(
                 self._make_snapshot(branch, regions, factions)
             )
+            if characters or armies:
+                fired, diverged = history.run_historical_events(
+                    self.session,
+                    branch,
+                    regions=regions,
+                    characters=characters,
+                    armies=armies,
+                    factions=factions,
+                    emit_event=lambda **kw: self._emit(
+                        branch, report, min_severity=0, **kw
+                    ),
+                )
+                report.history_fired.extend(fired)
+                report.history_diverged.extend(diverged)
 
         report.to_date = branch.current_date
         report.region_states = [r.snapshot() for r in regions]
@@ -219,6 +254,7 @@ class SimulationEngine:
                     "unrest_delta": round(d_unrest, 3),
                 }
             )
+
 
         # 势力关系自然漂移：藩镇不会永远听话
         relations = {

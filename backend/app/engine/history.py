@@ -1,0 +1,309 @@
+"""史实事件引擎。
+
+唐史推演器的关键机制：**史实不是剧本，是有前提的**。
+
+每个史实事件都带 conditions。条件成立 → 按史实发生；
+条件不成立 → 记为「改道」(diverged)，并说明原事件为何没有发生。
+这样用户改了一个决策之后，能直接看到"哪一段历史从这里分岔了"。
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import Any, Callable
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ..models import (
+    ArmyState,
+    Branch,
+    CharacterState,
+    FactionState,
+    HistoricalEvent,
+    HistoricalFire,
+    RegionState,
+    SimEvent,
+)
+
+#: 到点之后宽限多少个月（史书月份可能有出入，给出容错）
+GRACE_MONTHS = 2
+
+
+def _month_diff(a: dt.date, b: dt.date) -> int:
+    return (b.year - a.year) * 12 + (b.month - a.month)
+
+
+def check_conditions(
+    conditions: dict[str, Any],
+    *,
+    regions: dict[str, RegionState],
+    characters: dict[str, CharacterState],
+    armies: dict[str, ArmyState],
+) -> tuple[bool, str]:
+    """返回 (是否成立, 不成立的原因)。"""
+    if not conditions:
+        return True, ""
+
+    for key, value in conditions.items():
+        if key == "region_held":
+            region = regions.get(value)
+            if region is None:
+                return False, f"{value} 不在此世界"
+            # 地区被叛军占据即视为"已失"
+            if region.faction_key != "tang":
+                return False, f"{region.name} 已失"
+        elif key == "region_lost":
+            region = regions.get(value)
+            if region is None:
+                return False, f"{value} 不在此世界"
+            if region.faction_key == "tang":
+                return False, f"{region.name} 仍在唐军手中"
+        elif key == "character_alive":
+            person = characters.get(value)
+            if person is None:
+                return False, f"{value} 不在此世界"
+            if not person.alive:
+                return False, f"{person.name}已不在"
+        else:
+            return False, f"未知条件 {key}"
+
+    return True, ""
+
+
+def run_historical_events(
+    session: Session,
+    branch: Branch,
+    *,
+    regions: list[RegionState],
+    characters: dict[str, CharacterState],
+    armies: dict[str, ArmyState],
+    factions: dict[str, FactionState],
+    emit_event: Callable[..., Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """推进到当前日期后，检查有没有该发生的史实。
+
+    返回 (发生的事件, 改道的事件)，都是给前端展示用的字典。
+    """
+    fired_rows = {
+        row.event_key: row
+        for row in session.scalars(
+            select(HistoricalFire).where(HistoricalFire.branch_id == branch.id)
+        )
+    }
+    region_map = {r.region_key: r for r in regions}
+
+    events = list(
+        session.scalars(
+            select(HistoricalEvent)
+            .where(HistoricalEvent.world_id == branch.world_id)
+            .order_by(HistoricalEvent.date)
+        )
+    )
+
+    fired: list[dict[str, Any]] = []
+    diverged: list[dict[str, Any]] = []
+
+    for event in events:
+        if event.key in fired_rows:
+            continue
+        # 还没到日子
+        if event.date > branch.current_date:
+            continue
+        # 过太久就不追认了（说明前面早就乱套了）
+        if _month_diff(event.date, branch.current_date) > GRACE_MONTHS:
+            continue
+
+        ok, reason = check_conditions(
+            event.conditions or {},
+            regions=region_map,
+            characters=characters,
+            armies=armies,
+        )
+
+        if not ok:
+            session.add(
+                HistoricalFire(
+                    branch_id=branch.id,
+                    event_key=event.key,
+                    game_date=branch.current_date,
+                    status="diverged",
+                    note=reason,
+                )
+            )
+            diverged.append(
+                {
+                    "key": event.key,
+                    "title": event.title,
+                    "expected_date": event.date.isoformat(),
+                    "reason": reason,
+                    "note": event.divergence_note or f"因{reason}，此事未发生。",
+                    "source": event.source,
+                }
+            )
+            continue
+
+        applied = _apply_effects(
+            event.effects or {},
+            regions=region_map,
+            characters=characters,
+            armies=armies,
+            factions=factions,
+        )
+        session.add(
+            HistoricalFire(
+                branch_id=branch.id,
+                event_key=event.key,
+                game_date=branch.current_date,
+                status="fired",
+                note="",
+            )
+        )
+        if emit_event is not None:
+            # 交给引擎统一分配事件 ID：引擎是按 max(id)+1 手工编号再批量插入的，
+            # 这里如果直接 add(SimEvent) 会和引擎的编号撞车。
+            emit_event(
+                kind="history",
+                scope="world",
+                severity=5,
+                title=event.title,
+                summary=event.description,
+                region_keys=[],
+                faction_keys=[],
+                causes=[{"rule": "history", "event_key": event.key}],
+                metrics={"historical_key": event.key, "applied": applied},
+            )
+        else:
+            session.add(
+                SimEvent(
+                    branch_id=branch.id,
+                    game_date=branch.current_date,
+                    tick_index=branch.tick_index,
+                    scope="world",
+                    kind="history",
+                    severity=5,
+                    duration_months=1,
+                    title=event.title,
+                    summary=event.description,
+                    region_keys=[],
+                    faction_keys=[],
+                    causes=[{"rule": "history", "event_key": event.key}],
+                    metrics={"historical_key": event.key, "applied": applied},
+                )
+            )
+        fired.append(
+            {
+                "key": event.key,
+                "title": event.title,
+                "date": event.date.isoformat(),
+                "description": event.description,
+                "category": event.category,
+                "applied": applied,
+                "source": event.source,
+            }
+        )
+
+    return fired, diverged
+
+
+def _apply_effects(
+    effects: dict[str, Any],
+    *,
+    regions: dict[str, RegionState],
+    characters: dict[str, CharacterState],
+    armies: dict[str, ArmyState],
+    factions: dict[str, FactionState],
+) -> list[dict[str, Any]]:
+    applied: list[dict[str, Any]] = []
+
+    if effects.get("lose_region"):
+        region = regions.get(effects["lose_region"])
+        if region is not None and region.faction_key == "tang":
+            region.faction_key = "yan"
+            applied.append({"label": f"{region.name}失守", "before": "唐", "after": "燕"})
+
+    if effects.get("gain_region"):
+        region = regions.get(effects["gain_region"])
+        if region is not None and region.faction_key != "tang":
+            region.faction_key = "tang"
+            applied.append({"label": f"收复{region.name}", "before": "燕", "after": "唐"})
+
+    for key in effects.get("kill") or []:
+        person = characters.get(key)
+        if person is not None and person.alive:
+            person.alive = False
+            applied.append({"label": f"{person.name}身死", "before": "在世", "after": "殁"})
+
+    tang = factions.get("tang")
+    if tang is not None:
+        if effects.get("treasury"):
+            before = tang.treasury
+            tang.treasury += float(effects["treasury"])
+            applied.append(
+                {
+                    "label": "朝廷府库",
+                    "before": round(before, 0),
+                    "after": round(tang.treasury, 0),
+                }
+            )
+        if effects.get("legitimacy"):
+            before = tang.legitimacy
+            tang.legitimacy = min(max(tang.legitimacy + float(effects["legitimacy"]), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": "朝廷威望",
+                    "before": round(before, 3),
+                    "after": round(tang.legitimacy, 3),
+                }
+            )
+
+    for army_key, delta in (effects.get("morale") or {}).items():
+        army = armies.get(army_key)
+        if army is not None:
+            before = army.morale
+            army.morale = min(max(army.morale + float(delta), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": f"{army.name}士气",
+                    "before": round(before, 3),
+                    "after": round(army.morale, 3),
+                }
+            )
+
+    for army_key, delta in (effects.get("supply") or {}).items():
+        army = armies.get(army_key)
+        if army is not None:
+            before = army.supply
+            army.supply = min(max(army.supply + float(delta), 0.0), 1.0)
+            applied.append(
+                {
+                    "label": f"{army.name}补给",
+                    "before": round(before, 3),
+                    "after": round(army.supply, 3),
+                }
+            )
+
+    return applied
+
+
+def history_status(session: Session, branch_id: int) -> dict[str, Any]:
+    """这条时间线上，哪些史实发生了、哪些改道了。"""
+    rows = list(
+        session.scalars(
+            select(HistoricalFire)
+            .where(HistoricalFire.branch_id == branch_id)
+            .order_by(HistoricalFire.id)
+        )
+    )
+    return {
+        "fired": [
+            {"key": r.event_key, "date": r.game_date.isoformat()}
+            for r in rows
+            if r.status == "fired"
+        ],
+        "diverged": [
+            {"key": r.event_key, "date": r.game_date.isoformat(), "reason": r.note}
+            for r in rows
+            if r.status == "diverged"
+        ],
+    }

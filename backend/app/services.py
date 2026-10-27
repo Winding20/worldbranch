@@ -12,7 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (
+    ArmyState,
     Branch,
+    CharacterState,
     Decision,
     Faction,
     FactionState,
@@ -98,6 +100,35 @@ def create_branch(
                 to_key=relation.to_key,
                 kind=relation.kind,
                 value=relation.value,
+            )
+        )
+    # 唐史推演：人物与军队也要落成分支状态，否则人物之死、军队易主无法记录
+    for person in world.characters:
+        session.add(
+            CharacterState(
+                branch_id=branch.id,
+                character_key=person.key,
+                name=person.name,
+                faction_key=person.faction_key,
+                office=person.office,
+                loyalty=person.loyalty,
+                ability=person.ability,
+                location_region_key=person.location_region_key,
+                alive=person.alive,
+            )
+        )
+    for army in world.armies:
+        session.add(
+            ArmyState(
+                branch_id=branch.id,
+                army_key=army.key,
+                name=army.name,
+                faction_key=army.faction_key,
+                commander_key=army.commander_key,
+                region_key=army.region_key,
+                troops=army.troops,
+                morale=army.morale,
+                supply=army.supply,
             )
         )
     session.flush()
