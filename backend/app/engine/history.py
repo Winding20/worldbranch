@@ -19,10 +19,12 @@ from ..models import (
     ArmyState,
     Branch,
     CharacterState,
+    Decision,
     FactionState,
     HistoricalEvent,
     HistoricalFire,
     RegionState,
+    RelationState,
     SimEvent,
 )
 
@@ -103,6 +105,7 @@ def run_historical_events(
 
     fired: list[dict[str, Any]] = []
     diverged: list[dict[str, Any]] = []
+    forks: list[dict[str, Any]] = []
 
     for event in events:
         if event.key in fired_rows:
@@ -120,6 +123,35 @@ def run_historical_events(
             characters=characters,
             armies=armies,
         )
+
+        # 前提成立、但这件史实带"岔路口"：把决定权交给用户，暂缓发生
+        if ok and event.fork:
+            decision = Decision(
+                branch_id=branch.id,
+                game_date=branch.current_date,
+                tick_index=branch.tick_index,
+                kind="history_fork",
+                ref_key=event.key,
+                title=event.fork["title"],
+                description=event.fork["description"],
+                options=event.fork["options"],
+                status="pending",
+            )
+            session.add(decision)
+            session.add(
+                HistoricalFire(
+                    branch_id=branch.id,
+                    event_key=event.key,
+                    game_date=branch.current_date,
+                    status="pending",
+                    note="",
+                )
+            )
+            session.flush()
+            forks.append(decision.to_dict())
+            # 岔路口之后的事，必须等用户决定完再判：否则"潼关是否失守"还没定，
+            # 依赖它的"长安陷落"就已经被当成不成立而永久改道了。
+            break
 
         if not ok:
             session.add(
@@ -203,7 +235,7 @@ def run_historical_events(
             }
         )
 
-    return fired, diverged
+    return fired, diverged, forks
 
 
 def _apply_effects(
@@ -284,6 +316,104 @@ def _apply_effects(
             )
 
     return applied
+
+
+def resolve_fork(
+    session: Session, branch: Branch, decision: Decision, option_key: str
+) -> SimEvent:
+    """用户在历史岔路口上做出选择。
+
+    选「按史载」→ 事件照史发生；选别的 → 事件改道，并记录原因。
+    """
+    event = session.scalar(
+        select(HistoricalEvent).where(
+            HistoricalEvent.world_id == branch.world_id,
+            HistoricalEvent.key == decision.ref_key,
+        )
+    )
+    if event is None:
+        raise ValueError(f"找不到史实事件 {decision.ref_key}")
+
+    option = next((o for o in (decision.options or []) if o["key"] == option_key), None)
+    if option is None:
+        raise ValueError(f"没有这个选项: {option_key}")
+
+    regions = {
+        r.region_key: r
+        for r in session.scalars(
+            select(RegionState).where(RegionState.branch_id == branch.id)
+        )
+    }
+    characters = {
+        c.character_key: c
+        for c in session.scalars(
+            select(CharacterState).where(CharacterState.branch_id == branch.id)
+        )
+    }
+    armies = {
+        a.army_key: a
+        for a in session.scalars(
+            select(ArmyState).where(ArmyState.branch_id == branch.id)
+        )
+    }
+    factions = {
+        f.faction_key: f
+        for f in session.scalars(
+            select(FactionState).where(FactionState.branch_id == branch.id)
+        )
+    }
+
+    follow_history = option.get("outcome") == "historical"
+    effects = (event.effects or {}) if follow_history else (option.get("effects") or {})
+    applied = _apply_effects(
+        effects,
+        regions=regions,
+        characters=characters,
+        armies=armies,
+        factions=factions,
+    )
+
+    fire = session.scalar(
+        select(HistoricalFire).where(
+            HistoricalFire.branch_id == branch.id,
+            HistoricalFire.event_key == event.key,
+            HistoricalFire.status == "pending",
+        )
+    )
+    if fire is not None:
+        fire.status = "fired" if follow_history else "diverged"
+        fire.note = "" if follow_history else f"朝廷选择「{option['label']}」"
+
+    title = event.title if follow_history else f"{event.title}未发生（{option['label']}）"
+    summary = (
+        event.description
+        if follow_history
+        else (event.divergence_note or option.get("detail", ""))
+    )
+
+    sim = SimEvent(
+        branch_id=branch.id,
+        game_date=branch.current_date,
+        tick_index=branch.tick_index,
+        scope="world",
+        kind="history_fork",
+        severity=5,
+        duration_months=1,
+        title=title,
+        summary=summary,
+        region_keys=[],
+        faction_keys=[],
+        causes=[{"rule": "history_fork", "event_key": event.key, "option": option_key}],
+        metrics={
+            "historical_key": event.key,
+            "option": option_key,
+            "follow_history": follow_history,
+            "applied": applied,
+        },
+    )
+    session.add(sim)
+    session.flush()
+    return sim
 
 
 def history_status(session: Session, branch_id: int) -> dict[str, Any]:

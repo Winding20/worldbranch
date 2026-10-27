@@ -272,6 +272,44 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
         "effects": {"lose_region": "tongguan", "legitimacy": -0.10, "treasury": -250_000},
         "divergence_note": "潼关未失，长安暂安。",
         "source": "《资治通鉴》卷二一八",
+        # 史书说"使者相继"，催战的是玄宗与杨国忠。这里把决定权交给用户。
+        "fork": {
+            "title": "催哥舒翰出战",
+            "description": (
+                "哥舒翰守潼关，坚壁不出，奏称「利在坚守，不利轻出」。"
+                "杨国忠疑其拥兵自重，力请催促出战。使者已至潼关，去与不去，系于此诏。"
+            ),
+            "options": [
+                {
+                    "key": "order_attack",
+                    "label": "遣使催战",
+                    "detail": "按史载：唐军出关遇伏大败，潼关失守，长安门户洞开",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "hold_position",
+                    "label": "令其坚守",
+                    "detail": "潼关不失，长安得安；但二十万大军坐食，府库月耗十余万贯",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -400_000,
+                        "legitimacy": 0.04,
+                        "morale": {"tongguan_army": -0.05},
+                    },
+                },
+                {
+                    "key": "replace_commander",
+                    "label": "换将出战",
+                    "detail": "临阵易帅，军心浮动：潼关未必失，但守军战力大损",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -200_000,
+                        "legitimacy": -0.03,
+                        "morale": {"tongguan_army": -0.20},
+                    },
+                },
+            ],
+        },
     },
     {
         "key": "changan_falls",
@@ -316,6 +354,42 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
         "effects": {"supply": {"suiyang_army": -0.3}},
         "divergence_note": "睢阳未受围，江淮漕运安稳。",
         "source": "《资治通鉴》卷二一九",
+        "fork": {
+            "title": "睢阳告急",
+            "description": (
+                "睢阳被围，城中兵不满万，粮将尽。张巡遣使求援，"
+                "而周边唐军各拥兵观望。救与不救，朝廷须给个说法。"
+            ),
+            "options": [
+                {
+                    "key": "send_relief",
+                    "label": "严令周边赴援",
+                    "detail": "府库 −300,000 贯，睢阳可久守，江淮漕运不绝",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -300_000,
+                        "supply": {"suiyang_army": 0.35},
+                        "legitimacy": 0.05,
+                    },
+                },
+                {
+                    "key": "abandon",
+                    "label": "弃睢阳，退保江淮",
+                    "detail": "按史载：援军不至，城破，张巡死节；江淮震动",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "order_hold",
+                    "label": "责其死守，不加援兵",
+                    "detail": "不花钱，但睢阳必陷，张巡生死难料，天下寒心",
+                    "outcome": "diverge",
+                    "effects": {
+                        "legitimacy": -0.06,
+                        "supply": {"suiyang_army": -0.30},
+                    },
+                },
+            ],
+        },
     },
     {
         "key": "an_lushan_killed",

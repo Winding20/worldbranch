@@ -1,4 +1,4 @@
-"""决策：世界主动向用户提出的问题。
+﻿"""决策：世界主动向用户提出的问题。
 
 设计目的：让"用户不知道该干什么"变成"世界告诉你要决定什么"。
 每道决策都带 2–3 个选项，每个选项写明代价与后果，选完立即生效并留下事件。
@@ -404,6 +404,12 @@ def resolve_decision(
     """执行用户的选择，把它写回世界并留下一条事件。"""
     if decision.status != "pending":
         raise DecisionError("这道决策已经处理过了")
+
+    # 历史岔路口交给 history 处理：它要按"是否照史载"决定后续走向
+    if decision.kind == "history_fork":
+        from .history import resolve_fork
+
+        return resolve_fork(session, branch, decision, option_key)
 
     option = next((o for o in (decision.options or []) if o["key"] == option_key), None)
     if option is None:

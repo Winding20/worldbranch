@@ -66,6 +66,9 @@ class TickReport:
     relations: list[dict[str, Any]] = field(default_factory=list)
     history_fired: list[dict[str, Any]] = field(default_factory=list)
     history_diverged: list[dict[str, Any]] = field(default_factory=list)
+    history_forks: list[dict[str, Any]] = field(default_factory=list)
+    #: 是否因为出现岔路口而提前停下
+    paused: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +85,8 @@ class TickReport:
             "relations": self.relations,
             "history_fired": self.history_fired,
             "history_diverged": self.history_diverged,
+            "history_forks": self.history_forks,
+            "paused": self.paused,
         }
 
 
@@ -205,7 +210,7 @@ class SimulationEngine:
                 self._make_snapshot(branch, regions, factions)
             )
             if characters or armies:
-                fired, diverged = history.run_historical_events(
+                fired, diverged, forks = history.run_historical_events(
                     self.session,
                     branch,
                     regions=regions,
@@ -218,6 +223,13 @@ class SimulationEngine:
                 )
                 report.history_fired.extend(fired)
                 report.history_diverged.extend(diverged)
+                report.history_forks.extend(forks)
+                # 岔路口一出现，时间就该停在这里等用户决定。
+                # 否则后面的史实会在"前提尚未确定"的情况下被判定掉。
+                if forks:
+                    report.paused = True
+                    report.months = step + 1
+                    break
 
         report.to_date = branch.current_date
         report.region_states = [r.snapshot() for r in regions]

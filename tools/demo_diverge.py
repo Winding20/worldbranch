@@ -1,8 +1,11 @@
-"""演示"历史改道"：把一个前提改掉，看哪几件史实因此不再发生。
+"""演示历史改道：同样的结果，不同的原因。
 
-对比两条时间线：
-  A. 史实线：哥舒翰守潼关
-  B. 改道线：哥舒翰不在（提前病故）
+三个场景对比：
+  A. 史实线     —— 朝廷催战，潼关失守
+  B. 抗命坚守   —— 朝廷令哥舒翰坚守，潼关不失
+  C. 换个人守   —— 哥舒翰提前病故，无人可催，潼关同样不失
+
+B 与 C 结局相同，但原因完全不同——这正是"因果经得起推敲"要看的东西。
 
     python tools/demo_diverge.py
 """
@@ -18,21 +21,25 @@ from sqlalchemy import select  # noqa: E402
 
 from app.app_factory import create_app, get_db  # noqa: E402
 from app.engine import SimulationEngine  # noqa: E402
-from app.models import CharacterState  # noqa: E402
+from app.engine.decisions import resolve_decision  # noqa: E402
+from app.models import CharacterState, Decision, RegionState  # noqa: E402
 from app.services import create_branch, get_world_by_key  # noqa: E402
 
+SCENARIOS = {
+    "history": ("A. 史实线（朝廷催战）", "order_attack", False),
+    "hold": ("B. 朝廷令其坚守", "hold_position", False),
+    "dead": ("C. 哥舒翰提前病故", None, True),
+}
 
-def run(kill_geshu: bool) -> dict:
+
+def run(mode: str) -> dict:
+    _, fork_choice, kill_geshu = SCENARIOS[mode]
     app = create_app()
     with app.app_context():
         with get_db().session() as session:
             world = get_world_by_key(session, "tang_755")
             branch = create_branch(
-                session,
-                world,
-                name="改道线" if kill_geshu else "史实线",
-                seed=5,
-                precision="macro",
+                session, world, name=f"场景 {mode}", seed=5, precision="macro"
             )
             if kill_geshu:
                 person = session.scalar(
@@ -44,62 +51,83 @@ def run(kill_geshu: bool) -> dict:
                 person.alive = False
                 session.flush()
 
-            report = SimulationEngine(session).advance(branch, months=18)
-            regions = {}
-            state = session.scalar(select(CharacterState).where(
-                CharacterState.branch_id == branch.id
-            ))
-            del state
-            from app.models import RegionState
+            engine = SimulationEngine(session)
+            fired: list[str] = []
+            diverged: list[tuple[str, str]] = []
+            forks: list[str] = []
 
-            for r in session.scalars(
-                select(RegionState).where(RegionState.branch_id == branch.id)
-            ):
-                regions[r.region_key] = r.faction_key
+            for _ in range(8):
+                report = engine.advance(branch, months=12)
+                fired.extend(e["title"] for e in report.history_fired)
+                diverged.extend(
+                    (e["title"], e["reason"]) for e in report.history_diverged
+                )
+                for item in report.history_forks:
+                    decision = session.get(Decision, item["id"])
+                    if decision is None or decision.status != "pending":
+                        continue
+                    option = next(
+                        (o for o in decision.options if o["key"] == fork_choice),
+                        decision.options[0],
+                    )
+                    resolve_decision(session, branch, decision, option["key"])
+                    session.flush()
+                    forks.append(f"{decision.title} → {option['label']}")
+                if branch.current_date.year >= 763:
+                    break
+
+            regions = {
+                r.region_key: r.faction_key
+                for r in session.scalars(
+                    select(RegionState).where(RegionState.branch_id == branch.id)
+                )
+            }
             return {
-                "fired": [e["title"] for e in report.history_fired],
-                "diverged": [
-                    (e["title"], e["reason"], e["note"]) for e in report.history_diverged
-                ],
+                "fired": fired,
+                "diverged": diverged,
+                "forks": forks,
                 "regions": regions,
+                "date": str(branch.current_date),
             }
 
 
 def main() -> int:
-    baseline = run(False)
-    changed = run(True)
+    results = {mode: run(mode) for mode in SCENARIOS}
 
-    print("=" * 72)
-    print("A. 史实线（哥舒翰守潼关）")
-    print("=" * 72)
-    for title in baseline["fired"]:
-        print(f"  ✓ {title}")
-    for title, reason, _ in baseline["diverged"]:
-        print(f"  ✗ {title} — {reason}")
+    for mode, (title, _, _) in SCENARIOS.items():
+        r = results[mode]
+        print("=" * 74)
+        print(f"{title}   （至 {r['date']}）")
+        print("=" * 74)
+        for f in r["forks"]:
+            print(f"  ◆ 抉择：{f}")
+        for t in r["fired"]:
+            print(f"  ✓ {t}")
+        for t, reason in r["diverged"]:
+            print(f"  ✗ {t} —— {reason}")
+        print()
 
-    print()
-    print("=" * 72)
-    print("B. 改道线（哥舒翰提前病故）")
-    print("=" * 72)
-    for title in changed["fired"]:
-        print(f"  ✓ {title}")
-    for title, reason, note in changed["diverged"]:
-        print(f"  ✗ {title} — {reason}")
-        print(f"      {note}")
-
-    only_in_baseline = [t for t in baseline["fired"] if t not in changed["fired"]]
-    print()
-    print("=" * 72)
-    print(f"因为一个人不在，这 {len(only_in_baseline)} 件史实没有再发生：")
-    for title in only_in_baseline:
-        print(f"  · {title}")
+    print("=" * 74)
+    print("地区归属")
+    print("=" * 74)
+    print(f"  {'地区':<14}{'A 催战':<10}{'B 坚守':<10}{'C 病故':<10}")
+    for key in results["history"]["regions"]:
+        a = results["history"]["regions"][key]
+        b = results["hold"]["regions"][key]
+        c = results["dead"]["regions"][key]
+        mark = "  ←" if len({a, b, c}) > 1 else ""
+        print(f"  {key:<14}{a:<10}{b:<10}{c:<10}{mark}")
 
     print()
-    print("地区归属对比：")
-    for key in baseline["regions"]:
-        a, b = baseline["regions"][key], changed["regions"][key]
-        flag = "  ← 不同" if a != b else ""
-        print(f"  {key:<14} 史实线={a:<5} 改道线={b:<5}{flag}")
+    print("潼关的三种结局：")
+    causes = {
+        "history": "朝廷催战，出关遇伏",
+        "hold": "朝廷令其坚守，不出战",
+        "dead": "哥舒翰已故，无人可催",
+    }
+    for mode, (title, _, _) in SCENARIOS.items():
+        owner = results[mode]["regions"]["tongguan"]
+        print(f"  {title:<22} 潼关属{'唐' if owner == 'tang' else '燕'}  （{causes[mode]}）")
     return 0
 
 

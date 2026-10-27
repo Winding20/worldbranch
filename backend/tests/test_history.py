@@ -199,6 +199,131 @@ def test_historical_events_template_all_have_conditions_and_source(db_session):
         assert event.divergence_note, f"{event.key} 缺少改道说明"
 
 
+def test_fork_raises_decision_instead_of_firing(db_session):
+    """带岔路口的史实，到日子不直接发生，而是先问用户。"""
+    branch = _branch(db_session)
+    SimulationEngine(db_session).advance(branch, months=8)
+
+    fire = db_session.scalar(
+        select(HistoricalFire).where(
+            HistoricalFire.branch_id == branch.id,
+            HistoricalFire.event_key == "tongguan_falls",
+        )
+    )
+    assert fire is not None, "潼关之变到点应当被记录下来"
+    assert fire.status == "pending"
+
+    from app.models import Decision
+
+    decision = db_session.scalar(
+        select(Decision).where(
+            Decision.branch_id == branch.id,
+            Decision.kind == "history_fork",
+        )
+    )
+    assert decision is not None
+    assert decision.ref_key == "tongguan_falls"
+    assert len(decision.options) == 3
+
+
+def test_following_history_through_fork_loses_tongguan(db_session):
+    from app.engine.decisions import resolve_decision
+    from app.models import Decision
+
+    branch = _branch(db_session)
+    SimulationEngine(db_session).advance(branch, months=8)
+
+    decision = db_session.scalar(
+        select(Decision).where(
+            Decision.branch_id == branch.id,
+            Decision.kind == "history_fork",
+        )
+    )
+    resolve_decision(db_session, branch, decision, "order_attack")
+    db_session.flush()
+
+    region = db_session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id, RegionState.region_key == "tongguan"
+        )
+    )
+    assert region.faction_key == "yan"
+
+    fire = db_session.scalar(
+        select(HistoricalFire).where(
+            HistoricalFire.branch_id == branch.id,
+            HistoricalFire.event_key == "tongguan_falls",
+        )
+    )
+    assert fire.status == "fired"
+
+
+def test_holding_tongguan_changes_everything(db_session):
+    """选「令其坚守」→ 潼关不失，长安不陷，后续史实连锁改道。"""
+    from app.engine.decisions import resolve_decision
+    from app.models import Decision
+
+    branch = _branch(db_session)
+    engine = SimulationEngine(db_session)
+    engine.advance(branch, months=8)
+
+    decision = db_session.scalar(
+        select(Decision).where(
+            Decision.branch_id == branch.id,
+            Decision.kind == "history_fork",
+        )
+    )
+    resolve_decision(db_session, branch, decision, "hold_position")
+    db_session.flush()
+
+    tongguan = db_session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id, RegionState.region_key == "tongguan"
+        )
+    )
+    assert tongguan.faction_key == "tang", "坚守则潼关不失"
+
+    engine.advance(branch, months=6)
+
+    changan = db_session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id, RegionState.region_key == "changan"
+        )
+    )
+    assert changan.faction_key == "tang", "潼关不失，长安不该陷落"
+
+    fires = {
+        f.event_key: f
+        for f in db_session.scalars(
+            select(HistoricalFire).where(HistoricalFire.branch_id == branch.id)
+        )
+    }
+    assert fires["changan_falls"].status == "diverged"
+
+
+def test_fork_choice_is_recorded_in_event(db_session):
+    from app.engine.decisions import resolve_decision
+    from app.models import Decision, SimEvent
+
+    branch = _branch(db_session)
+    SimulationEngine(db_session).advance(branch, months=8)
+    decision = db_session.scalar(
+        select(Decision).where(
+            Decision.branch_id == branch.id,
+            Decision.kind == "history_fork",
+        )
+    )
+    event = resolve_decision(db_session, branch, decision, "hold_position")
+    db_session.flush()
+
+    assert event.kind == "history_fork"
+    assert event.metrics["follow_history"] is False
+    assert event.metrics["applied"], "改道也要有可量化的后果"
+
+
+# --------------------------------------------------------------------------- #
+# API
+# --------------------------------------------------------------------------- #
 def test_history_api(client):
     branch = client.post("/api/worlds/tang_755/branches", json={"seed": 5}).get_json()
     bid = branch["id"]

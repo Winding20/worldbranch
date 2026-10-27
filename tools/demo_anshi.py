@@ -1,4 +1,4 @@
-﻿"""安史之乱八年推演演示。
+"""安史之乱八年推演演示。
 
 跑一遍 755–763，看史实事件是否按史发生、在哪里改道。
 
@@ -60,6 +60,23 @@ def main() -> int:
             print(f"\n  【改道】{item['expected_date']} 原应发生「{item['title']}」")
             print(f"      原因：{item['reason']}")
             print(f"      {item['note']}")
+        # 岔路口：史实线一律选「按史载」
+        for decision in call(f"/api/branches/{bid}/decisions"):
+            if decision["kind"] != "history_fork":
+                continue
+            chosen = next(
+                (o for o in decision["options"] if o.get("outcome") == "historical"),
+                decision["options"][0],
+            )
+            result = call(
+                f"/api/branches/{bid}/decisions/{decision['id']}/resolve",
+                "POST",
+                {"option": chosen["key"]},
+            )
+            print(f"\n  【抉择】{decision['title']} → {chosen['label']}")
+            print(f"      {result['event']['title']}")
+            for eff in result["event"]["metrics"].get("applied", []):
+                print(f"      {eff['label']}: {eff['before']} → {eff['after']}")
 
     status = call(f"/api/branches/{bid}/history")
     state = call(f"/api/branches/{bid}/state")
