@@ -324,6 +324,52 @@ def test_fork_choice_is_recorded_in_event(db_session):
 # --------------------------------------------------------------------------- #
 # API
 # --------------------------------------------------------------------------- #
+def test_full_eight_years_follows_history(db_session):
+    """整段八年的回归测试：一路按史载走，18 件史实应当全部应验。"""
+    from app.engine.decisions import resolve_decision
+    from app.models import Decision
+    from app.seed import anlushan_755
+
+    branch = _branch(db_session)
+    engine = SimulationEngine(db_session)
+
+    for _ in range(24):
+        report = engine.advance(branch, months=12)
+        for item in report.history_forks:
+            decision = db_session.get(Decision, item["id"])
+            if decision is None or decision.status != "pending":
+                continue
+            option = next(
+                (o for o in decision.options if o.get("outcome") == "historical"),
+                decision.options[0],
+            )
+            resolve_decision(db_session, branch, decision, option["key"])
+            db_session.flush()
+        if branch.current_date.year >= 763:
+            break
+
+    assert branch.current_date.year >= 763, "应当推进到广德元年"
+
+    fires = {
+        f.event_key: f.status
+        for f in db_session.scalars(
+            select(HistoricalFire).where(HistoricalFire.branch_id == branch.id)
+        )
+    }
+    expected = {e["key"] for e in anlushan_755.HISTORICAL_EVENTS}
+    missing = expected - set(fires)
+    assert not missing, f"这些史实从未被判定: {missing}"
+    assert all(status == "fired" for status in fires.values()), fires
+
+    # 潼关与河北始终未收复，与史实一致
+    tongguan = db_session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id, RegionState.region_key == "tongguan"
+        )
+    )
+    assert tongguan.faction_key == "yan"
+
+
 def test_history_api(client):
     branch = client.post("/api/worlds/tang_755/branches", json={"seed": 5}).get_json()
     bid = branch["id"]

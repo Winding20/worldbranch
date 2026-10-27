@@ -1,4 +1,4 @@
-"""史实事件引擎。
+﻿"""史实事件引擎。
 
 唐史推演器的关键机制：**史实不是剧本，是有前提的**。
 
@@ -412,6 +412,14 @@ def resolve_fork(
         },
     )
     session.add(sim)
+    session.flush()
+
+    # 必须把决策标记为已处理：否则每轮查询都会把它当成"还待决"，
+    # 用户会看到同一份奏疏反复出现，效果也被重复施加。
+    decision.status = "resolved"
+    decision.resolved_option = option_key
+    decision.resolved_at = dt.datetime.now(dt.timezone.utc)
+    decision.result_event_id = sim.id
     session.flush()
     return sim
 

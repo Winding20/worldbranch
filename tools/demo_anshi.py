@@ -48,7 +48,7 @@ def main() -> int:
     print(f"\n开局：{world['start_date']}，{len(world['regions'])} 个地区，分支 {bid}")
 
     last_date = None
-    for _ in range(8):
+    for _ in range(24):
         report = call(f"/api/branches/{bid}/advance", "POST", {"months": 12})
         last_date = report["to_date"]
         for item in report.get("history_fired", []):
@@ -77,6 +77,9 @@ def main() -> int:
             print(f"      {result['event']['title']}")
             for eff in result["event"]["metrics"].get("applied", []):
                 print(f"      {eff['label']}: {eff['before']} → {eff['after']}")
+
+        if last_date and last_date[:4] >= "763":
+            break
 
     status = call(f"/api/branches/{bid}/history")
     state = call(f"/api/branches/{bid}/state")

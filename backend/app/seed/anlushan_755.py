@@ -1,4 +1,4 @@
-"""天宝十四载至广德元年（755–763）：安史之乱。
+﻿"""天宝十四载至广德元年（755–763）：安史之乱。
 
 这是唐史推演器的第一个完整切片。选它的理由：
 - 起止清晰：755 年十一月范阳起兵 → 763 年史朝义自尽；
@@ -211,6 +211,46 @@ CHARACTERS: list[dict[str, Any]] = [
         "bio": "安禄山次子。杀父自立，不能驭众，弃洛阳走邺，为史思明所杀。",
         "source": "《旧唐书·安庆绪传》",
     },
+    {
+        "key": "shi_chaoyi", "name": "史朝义", "role": "rebel",
+        "office": "怀王", "faction_key": "yan", "born": None, "died": 763,
+        "ability": 0.42, "loyalty": 0.0, "ambition": 0.6,
+        "location_region_key": "fanyang",
+        "bio": "史思明长子。杀父自立，为诸将所轻，兵败自缢于温泉栅，乱由此平。",
+        "source": "《旧唐书·史朝义传》",
+    },
+    {
+        "key": "li_chu", "name": "李俶", "alias": "代宗", "role": "emperor",
+        "office": "广平王（后即位）", "faction_key": "tang", "born": 727, "died": 779,
+        "ability": 0.58, "loyalty": 1.0, "ambition": 0.4,
+        "location_region_key": "changan",
+        "bio": "肃宗长子。以天下兵马元帅名义收复两京，后即位，借回纥兵平乱，然藩镇之势已成。",
+        "source": "《旧唐书·代宗本纪》",
+    },
+    {
+        "key": "pugu_huai_en", "name": "仆固怀恩", "role": "general",
+        "office": "朔方节度使", "faction_key": "tang", "born": None, "died": 765,
+        "ability": 0.72, "loyalty": 0.65, "ambition": 0.55,
+        "location_region_key": "lingwu",
+        "bio": "铁勒族，朔方名将，平乱后期主力。功高而为人所忌，终至叛走。",
+        "source": "《旧唐书·仆固怀恩传》",
+    },
+    {
+        "key": "yu_chaoen", "name": "鱼朝恩", "role": "eunuch",
+        "office": "观军容使", "faction_key": "tang", "born": 722, "died": 770,
+        "ability": 0.30, "loyalty": 0.45, "ambition": 0.80,
+        "location_region_key": "changan",
+        "bio": "宦官，监九节度之军于邺城。不通兵事而掣肘诸将，邺城之败与其相关。",
+        "source": "《旧唐书·鱼朝恩传》",
+    },
+    {
+        "key": "li_bi", "name": "李泌", "role": "minister",
+        "office": "谋臣（未任宰相）", "faction_key": "tang", "born": 722, "died": 789,
+        "ability": 0.86, "loyalty": 0.85, "ambition": 0.15,
+        "location_region_key": "lingwu",
+        "bio": "肃宗为太子时旧识，乱中赴行在，屡献平叛之策，多为人所阻。",
+        "source": "《旧唐书·李泌传》",
+    },
 ]
 
 # --------------------------------------------------------------------------- #
@@ -229,6 +269,10 @@ ARMIES: list[dict[str, Any]] = [
      "region_key": "taiyuan", "troops": 50_000, "morale": 0.75, "supply": 0.65},
     {"key": "suiyang_army", "name": "睢阳守军", "faction_key": "tang", "commander_key": "zhang_xun",
      "region_key": "suiyang", "troops": 7_000, "morale": 0.90, "supply": 0.35},
+    {"key": "huihu_cavalry", "name": "回纥骑兵", "faction_key": "tang", "commander_key": None,
+     "region_key": "lingwu", "troops": 4_000, "morale": 0.90, "supply": 0.85},
+    {"key": "yecheng_army", "name": "九节度之师", "faction_key": "tang", "commander_key": "pugu_huai_en",
+     "region_key": "luoyang", "troops": 200_000, "morale": 0.55, "supply": 0.45},
 ]
 
 # --------------------------------------------------------------------------- #
@@ -423,6 +467,172 @@ HISTORICAL_EVENTS: list[dict[str, Any]] = [
         "effects": {"gain_region": "luoyang", "legitimacy": 0.08},
         "divergence_note": "洛阳仍在叛军手中。",
         "source": "《资治通鉴》卷二二〇",
+    },
+    # ---------------- 758–763 ----------------
+    {
+        "key": "yecheng_siege",
+        "date": dt.date(758, 10, 1),
+        "title": "九节度围邺城",
+        "category": "battle",
+        "description": "唐廷以九节度之师合围邺城，然不置元帅，以宦官鱼朝恩为观军容使，诸军不相统属。",
+        "conditions": {"region_held": "luoyang"},
+        "effects": {"treasury": -600_000},
+        "divergence_note": "洛阳已失，邺城之围未成。",
+        "source": "《资治通鉴》卷二二〇",
+    },
+    {
+        "key": "yecheng_defeat",
+        "date": dt.date(759, 3, 1),
+        "title": "邺城之败",
+        "category": "battle",
+        "description": "史思明自范阳南下救邺，唐军九节度各自溃退，甲仗资粮尽失。",
+        "conditions": {"region_held": "luoyang", "character_alive": "shi_siming"},
+        "effects": {
+            "morale": {"yecheng_army": -0.25, "shuofang_army": -0.10},
+            "legitimacy": -0.10,
+            "treasury": -400_000,
+        },
+        "divergence_note": "史思明未能南下，邺城之败未发生。",
+        "source": "《资治通鉴》卷二二一",
+        "fork": {
+            "title": "邺城久围不下",
+            "description": (
+                "九节度的军队把邺城围了半年，城破在即，但诸军无统属，"
+                "监军鱼朝恩又屡屡掣肘。是催促急攻，还是再等一等？"
+            ),
+            "options": [
+                {
+                    "key": "rush_attack",
+                    "label": "催诸军急攻",
+                    "detail": "按史载：史思明南下，唐军大溃，甲仗尽失",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "wait_and_starve",
+                    "label": "久围待其自溃",
+                    "detail": "府库 −350,000 贯；不冒险野战，然师老于外",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -350_000,
+                        "morale": {"yecheng_army": -0.10},
+                        "legitimacy": 0.03,
+                    },
+                },
+                {
+                    "key": "unify_command",
+                    "label": "授一人总统诸军",
+                    "detail": "府库 −150,000 贯；诸军归一，邺城未必即下，但可免大溃",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -150_000,
+                        "legitimacy": 0.05,
+                        "morale": {"yecheng_army": 0.10},
+                    },
+                },
+            ],
+        },
+    },
+    {
+        "key": "shi_siming_kills_qingxu",
+        "date": dt.date(759, 4, 1),
+        "title": "史思明杀安庆绪自立",
+        "category": "rebellion",
+        "description": "史思明入邺城，杀安庆绪，收其众，自称大燕皇帝。叛军换了主人，势头反而更盛。",
+        "conditions": {"character_alive": "shi_siming"},
+        "effects": {"morale": {"hebei_army": 0.10}, "kill": ["an_qingxu"]},
+        "divergence_note": "史思明已不在，安庆绪未为所杀。",
+        "source": "《资治通鉴》卷二二一",
+    },
+    {
+        "key": "luoyang_falls_again",
+        "date": dt.date(759, 9, 1),
+        "title": "史思明再陷洛阳",
+        "category": "battle",
+        "description": "史思明乘胜南下，再据洛阳，唐军退保陕州。",
+        "conditions": {"region_held": "luoyang", "character_alive": "shi_siming"},
+        "effects": {"lose_region": "luoyang", "legitimacy": -0.08},
+        "divergence_note": "洛阳未再失守。",
+        "source": "《资治通鉴》卷二二一",
+    },
+    {
+        "key": "shi_siming_killed",
+        "date": dt.date(761, 3, 1),
+        "title": "史思明为其子所杀",
+        "category": "rebellion",
+        "description": "史朝义与部将谋杀史思明，自立。叛军连杀两主，人心渐散。",
+        "conditions": {"character_alive": "shi_siming"},
+        "effects": {"kill": ["shi_siming"], "morale": {"hebei_army": -0.20}},
+        "divergence_note": "史思明仍在，叛军号令如一。",
+        "source": "《资治通鉴》卷二二二",
+    },
+    {
+        "key": "borrow_huihu",
+        "date": dt.date(762, 10, 1),
+        "title": "借回纥兵",
+        "category": "politics",
+        "description": "代宗即位，欲借回纥骑兵平乱，许以厚赏。回纥可汗亲率精锐南下。",
+        "conditions": {"region_lost": "luoyang", "character_alive": "li_chu"},
+        "effects": {"treasury": -500_000, "legitimacy": -0.03},
+        "divergence_note": "洛阳未失，或无需借兵。",
+        "source": "《资治通鉴》卷二二二",
+        "fork": {
+            "title": "是否借回纥兵",
+            "description": (
+                "回纥可汗愿以精骑助战，条件是破城之后任其劫掠。"
+                "朝中有人以为可解燃眉之急，也有人以为引狼入室。"
+            ),
+            "options": [
+                {
+                    "key": "borrow",
+                    "label": "借兵平乱",
+                    "detail": "按史载：回纥助战，洛阳收复，然东都再遭劫掠，民心大失",
+                    "outcome": "historical",
+                },
+                {
+                    "key": "refuse_huihu",
+                    "label": "不借，自以唐军平之",
+                    "detail": "府库 −700,000 贯；不欠回纥人情，但战事拖延，伤亡更重",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -700_000,
+                        "legitimacy": 0.04,
+                        "morale": {"yecheng_army": -0.10},
+                    },
+                },
+                {
+                    "key": "borrow_with_terms",
+                    "label": "借兵但约法三章",
+                    "detail": "府库 −900,000 贯；重金换取约束，洛阳可保，府库大损",
+                    "outcome": "diverge",
+                    "effects": {
+                        "treasury": -900_000,
+                        "legitimacy": 0.08,
+                    },
+                },
+            ],
+        },
+    },
+    {
+        "key": "luoyang_recovered_2",
+        "date": dt.date(762, 11, 1),
+        "title": "再复洛阳",
+        "category": "battle",
+        "description": "唐军与回纥合兵，再克洛阳，史朝义北走。",
+        "conditions": {"region_lost": "luoyang"},
+        "effects": {"gain_region": "luoyang", "legitimacy": 0.08},
+        "divergence_note": "洛阳未复。",
+        "source": "《资治通鉴》卷二二二",
+    },
+    {
+        "key": "shi_chaoyi_dead",
+        "date": dt.date(763, 1, 1),
+        "title": "史朝义自尽，安史之乱平",
+        "category": "rebellion",
+        "description": "史朝义走投无路，自缢于温泉栅。历时八年的安史之乱至此平定。",
+        "conditions": {"character_alive": "shi_chaoyi", "region_held": "luoyang"},
+        "effects": {"kill": ["shi_chaoyi"], "legitimacy": 0.10, "morale": {"hebei_army": -0.40}},
+        "divergence_note": "史朝义未败，乱事未平。",
+        "source": "《资治通鉴》卷二二二",
     },
 ]
 
