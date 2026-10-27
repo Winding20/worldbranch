@@ -4,8 +4,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 const props = defineProps({
   regions: { type: Array, default: () => [] },
   selected: { type: String, default: "" },
+  scale: { type: String, default: "region" },
+  factions: { type: Array, default: () => [] },
 });
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["select", "zoom-change"]);
 
 const VB = { w: 900, h: 620 };
 const svgRef = ref(null);
@@ -22,6 +24,13 @@ const REGION_COLORS = {
   jiangnan: [128, 116, 150],
   longyou: [102, 112, 128],
 };
+
+//: 势力配色：宏观视角下同势力的道用同一底色，边界的颜色变化即国界
+const FACTION_COLORS = {
+  tang: [92, 124, 158],
+  fanzhen: [156, 104, 88],
+};
+const FALLBACK_FACTION_COLOR = [104, 118, 132];
 const LABEL_AT = {
   guannei: [108.6, 33.4],
   henan: [114.8, 33.9],
@@ -98,6 +107,37 @@ function baseColor(key) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
+/** 宏观尺度按势力着色，细尺度按道着色。 */
+const macro = computed(() => props.scale === "world" || props.scale === "nation");
+
+function regionFill(region) {
+  if (!macro.value) return baseColor(region.region_key);
+  const c = FACTION_COLORS[region.faction_key] || FALLBACK_FACTION_COLOR;
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function factionName(key) {
+  const f = props.factions.find((x) => x.key === key);
+  return f ? f.name : key || "—";
+}
+
+/** 宏观视角下只在治所标一个势力名，避免每个道都写一遍。 */
+const factionLabels = computed(() => {
+  if (!macro.value || !projection.value) return [];
+  const seen = new Set();
+  const out = [];
+  props.regions.forEach((r) => {
+    const key = r.faction_key || "unknown";
+    if (seen.has(key)) return;
+    seen.add(key);
+    const capital = props.factions.find((f) => f.key === key)?.capital_region_key;
+    const anchor = props.regions.find((x) => x.region_key === capital) || r;
+    const [x, y] = projection.value.toXY(anchor.lon, anchor.lat);
+    out.push({ key, name: factionName(key), x, y });
+  });
+  return out;
+});
+
 function stressAlpha(price) {
   const t = Math.max(0, Math.min(((price || 1) - 1.0) / 1.6, 1));
   return +(t * 0.62).toFixed(3);
@@ -126,6 +166,7 @@ function zoomAt(factor, clientX, clientY) {
   const next = Math.min(Math.max(k * factor, 0.6), 14);
   const ratio = next / k;
   transform.value = { k: next, x: sx - (sx - x) * ratio, y: sy - (sy - y) * ratio };
+  emit("zoom-change", next);
 }
 
 function onWheel(e) {
@@ -157,6 +198,7 @@ function onMouseUp() {
 
 function reset() {
   transform.value = { k: 1, x: 0, y: 0 };
+  emit("zoom-change", 1);
 }
 
 onMounted(() => {
@@ -188,7 +230,7 @@ defineExpose({ zoomAt, reset });
           v-for="s in shapes"
           :key="`stroke-${s.region.region_key}`"
           :d="s.d"
-          :fill="baseColor(s.region.region_key)"
+          :fill="regionFill(s.region)"
           stroke="#0a0f14"
           stroke-width="1.6"
           stroke-linejoin="round"
@@ -197,7 +239,7 @@ defineExpose({ zoomAt, reset });
           v-for="s in shapes"
           :key="`fill-${s.region.region_key}`"
           :d="s.d"
-          :fill="baseColor(s.region.region_key)"
+          :fill="regionFill(s.region)"
           stroke="none"
         />
         <!-- 粮价压力叠加 -->
@@ -230,8 +272,15 @@ defineExpose({ zoomAt, reset });
           stroke-width="3"
           pointer-events="none"
         />
-        <!-- 标签 -->
-        <g v-for="s in shapes" :key="`label-${s.region.region_key}`" pointer-events="none">
+        <!-- 标签：宏观尺度只标势力，细尺度标每个道 -->
+        <g v-if="macro" pointer-events="none">
+          <g v-for="f in factionLabels" :key="`fl-${f.key}`">
+            <text :x="f.x" :y="f.y - 2" class="faction-label" text-anchor="middle">
+              {{ f.name }}
+            </text>
+          </g>
+        </g>
+        <g v-else v-for="s in shapes" :key="`label-${s.region.region_key}`" pointer-events="none">
           <text
             :x="labelPos(s.region)[0]"
             :y="labelPos(s.region)[1] - 2"
@@ -279,6 +328,16 @@ defineExpose({ zoomAt, reset });
   paint-order: stroke;
   stroke: rgba(0, 0, 0, 0.6);
   stroke-width: 2.5px;
+  user-select: none;
+}
+.faction-label {
+  font-size: 17px;
+  font-weight: 700;
+  fill: #f2f7fb;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.7);
+  stroke-width: 4px;
+  letter-spacing: 2px;
   user-select: none;
 }
 .map-hint {

@@ -24,6 +24,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   branchState: (id) => request(`/api/branches/${id}/state`),
+  view: (id, scale) => request(`/api/branches/${id}/view?scale=${scale}`),
   advance: (id, months, precision) =>
     request(`/api/branches/${id}/advance`, {
       method: "POST",

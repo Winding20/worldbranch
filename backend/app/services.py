@@ -377,8 +377,98 @@ def build_event_chain(
 
 
 # --------------------------------------------------------------------------- #
-# 分支对比
+# 多尺度观察
 # --------------------------------------------------------------------------- #
+#: 观察尺度 -> 聚合方式
+SCALES = ("world", "nation", "region", "local")
+
+
+def aggregate_by_scale(session: Session, branch: Branch, scale: str) -> dict:
+    """按观察尺度聚合世界状态。
+
+    设计文档的核心要求：地图缩放不制造也不隐藏数据，只是换一种聚合方式。
+    因此这里不产生任何新数据，只是把同一批 RegionState 按势力或按道汇总。
+    """
+    if scale not in SCALES:
+        raise ValueError(f"未知的观察尺度: {scale}")
+
+    states = list(
+        session.scalars(
+            select(RegionState).where(RegionState.branch_id == branch.id)
+        )
+    )
+    faction_states = {
+        f.faction_key: f
+        for f in session.scalars(
+            select(FactionState).where(FactionState.branch_id == branch.id)
+        )
+    }
+    meta = faction_meta(session, branch.world_id)
+
+    def unit_payload(key: str, name: str, kind: str, members: list[RegionState]) -> dict:
+        total_pop = sum(r.population for r in members) or 1
+        weighted_price = sum(
+            r.price_index * r.population for r in members
+        ) / total_pop
+        faction = faction_states.get(key)
+        return {
+            "key": key,
+            "name": name,
+            "kind": kind,
+            "region_keys": [r.region_key for r in members],
+            "metrics": {
+                "population": total_pop,
+                "grain_stock": round(sum(r.grain_stock for r in members), 1),
+                "price_index": round(weighted_price, 4),
+                "unrest_max": round(max((r.unrest for r in members), default=0.0), 4),
+                "region_count": len(members),
+                "treasury": round(faction.treasury, 1) if faction else None,
+                "legitimacy": round(faction.legitimacy, 4) if faction else None,
+            },
+            "capital_region_key": meta.get(key, {}).get("capital_region_key"),
+        }
+
+    if scale == "world":
+        # 最宏观：只看势力。世界级只应呈现战争、联盟、全局灾难这个量级的事。
+        by_faction: dict[str, list[RegionState]] = {}
+        for r in states:
+            by_faction.setdefault(r.faction_key or "unknown", []).append(r)
+        units = [
+            unit_payload(
+                key,
+                meta.get(key, {}).get("name", key),
+                "faction",
+                members,
+            )
+            for key, members in sorted(by_faction.items())
+        ]
+        event_scopes = ["world", "nation"]
+
+    elif scale == "nation":
+        # 国家级：仍是势力视角，但带上治所，便于看朝堂与藩镇的对比
+        by_faction = {}
+        for r in states:
+            by_faction.setdefault(r.faction_key or "unknown", []).append(r)
+        units = [
+            unit_payload(key, meta.get(key, {}).get("name", key), "faction", members)
+            for key, members in sorted(by_faction.items())
+        ]
+        event_scopes = ["nation", "region"]
+
+    else:
+        # 地区级 / 局部级：回到逐个道
+        units = [
+            unit_payload(r.region_key, r.name, "region", [r])
+            for r in sorted(states, key=lambda x: x.region_key)
+        ]
+        event_scopes = ["region", "local"] if scale == "local" else ["region"]
+
+    return {
+        "scale": scale,
+        "branch": branch.to_dict(),
+        "units": units,
+        "event_scopes": event_scopes,
+    }
 #: 对比时关注的地区指标
 REGION_METRICS = ("population", "grain_stock", "price_index", "unrest", "tax_rate")
 

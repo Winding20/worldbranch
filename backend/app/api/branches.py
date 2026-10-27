@@ -1,4 +1,4 @@
-"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
+﻿"""分支（时间线）相关接口：推进模拟、读取状态与事件、派生分支。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from ..engine import SimulationEngine
 from ..models import FactionState, RegionState, SimEvent, Snapshot
 from ..utils import format_date
 from ..services import (
+    aggregate_by_scale,
     apply_action,
     build_event_chain,
     compare_branches,
@@ -24,6 +25,18 @@ bp = Blueprint("branches", __name__, url_prefix="/api/branches")
 
 #: 事件范围对应的最小展示层级（越大越宏观）
 SCOPE_ORDER = {"local": 1, "region": 2, "nation": 3, "world": 4}
+
+
+@bp.get("/<int:branch_id>/view")
+def view_route(branch_id: int):
+    """按观察尺度返回聚合后的世界状态。
+
+    缩放地图时前端只要换一个 scale，后端不做任何数据增减，只换聚合方式。
+    """
+    scale = request.args.get("scale", "region")
+    with get_db().session() as session:
+        branch = get_branch(session, branch_id)
+        return jsonify(aggregate_by_scale(session, branch, scale))
 
 
 @bp.get("/compare")

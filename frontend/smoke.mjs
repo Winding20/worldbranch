@@ -71,13 +71,12 @@ while (Date.now() < deadline) {
 // 再多等一拍，让事件流也渲染完
 await wait(600);
 body = window.document.getElementById("app").innerHTML;
-const regionLabels = window.document.querySelectorAll("text.region-label");
-const eventCards = window.document.querySelectorAll(".event-item");
+const regionLabelsAtStart = window.document.querySelectorAll("text.region-label");
 
 const checks = {
   "已挂载": body.length > 200,
   "出现地图 SVG": body.includes("<svg"),
-  "地区标签 7 个": regionLabels.length === 7,
+  "地区标签 7 个": regionLabelsAtStart.length === 7,
   "出现地区名": /关内道|河南道|河北道/.test(body),
   "事件流已渲染": body.includes("事件流"),
   "出现模拟控制": body.includes("推进"),
@@ -125,6 +124,48 @@ const compareChecks = {
 };
 
 for (const [name, ok] of Object.entries(compareChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${name}`);
+  if (!ok) failed += 1;
+}
+if (errors.length) {
+  console.log("\n捕获到的错误：");
+  errors.slice(0, 5).forEach((e) => console.log("  -", e));
+}
+// ---- 多尺度：切到世界级，应变成势力视角 ----
+console.log("\n【多尺度观察】");
+const simTab = [...window.document.querySelectorAll(".view-tabs button")].find(
+  (b) => b.textContent.trim() === "推演"
+);
+if (simTab) simTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await wait(700);
+
+const scopeSelect = window.document.querySelector("#scope");
+if (!scopeSelect) {
+  console.log("✗ 找不到观察尺度选择器");
+  process.exit(1);
+}
+scopeSelect.value = "world";
+scopeSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+
+const scaleDeadline = Date.now() + 12000;
+let factionText = "";
+while (Date.now() < scaleDeadline) {
+  await wait(400);
+  factionText = window.document.querySelector("#app").textContent;
+  if (factionText.includes("势力概览")) break;
+}
+const factionLabels = window.document.querySelectorAll("text.faction-label");
+const regionLabelsAfter = window.document.querySelectorAll("text.region-label");
+
+const scaleChecks = {
+  "切换到势力概览": /势力概览/.test(factionText),
+  "出现势力名标签": factionLabels.length >= 2,
+  "地区标签已隐藏": regionLabelsAfter.length === 0,
+  "出现势力聚合数据": /存粮/.test(factionText) && /粮价/.test(factionText),
+  "尺度切换无运行时错误": errors.length === 0,
+};
+
+for (const [name, ok] of Object.entries(scaleChecks)) {
   console.log(`${ok ? "✓" : "✗"} ${name}`);
   if (!ok) failed += 1;
 }

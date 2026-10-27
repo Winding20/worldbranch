@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { api } from "./api.js";
 import MapView from "./components/MapView.vue";
 import EventFeed from "./components/EventFeed.vue";
@@ -25,8 +25,22 @@ const busy = ref(false);
 const message = ref("底层按规则逐月计算，不是整段交给 AI 总结。");
 const error = ref("");
 const view = ref("sim");
+const units = ref([]);
+const manualScope = ref(false);
+
+const macro = computed(() => scope.value === "world" || scope.value === "nation");
 
 const region = ref(null);
+
+function onScopeSelect(value) {
+  manualScope.value = true;
+  scope.value = value;
+}
+
+function backToAuto() {
+  manualScope.value = false;
+  scope.value = "region";
+}
 
 function selectRegion(key) {
   selected.value = key;
@@ -46,6 +60,24 @@ async function loadEvents() {
   events.value = await api.events(branch.value.id);
 }
 
+/** 按当前观察尺度拉聚合结果（宏观看势力，细尺度看道）。 */
+async function loadView() {
+  if (!branch.value) return;
+  const data = await api.view(branch.value.id, scope.value);
+  units.value = data.units;
+}
+
+/** 地图缩放驱动观察尺度；用户手动改过之后就不再自动跟随。 */
+function onZoomChange(k) {
+  if (manualScope.value) return;
+  const next = k < 1.25 ? "world" : k < 2.2 ? "nation" : k < 4.5 ? "region" : "local";
+  if (next !== scope.value) scope.value = next;
+}
+
+watch(scope, () => {
+  loadView();
+});
+
 async function ensureBranch() {
   const list = await api.branches(WORLD);
   if (Array.isArray(list) && list.length) return list[0];
@@ -61,6 +93,7 @@ async function boot() {
     branch.value = await ensureBranch();
     await loadState();
     await loadEvents();
+    await loadView();
   } catch (err) {
     error.value = `初始化失败：${err.message}`;
   }
@@ -146,12 +179,21 @@ onMounted(boot);
       <div class="map-toolbar">
         <div class="scale-group">
           <label for="scope">观察尺度</label>
-          <select id="scope" v-model="scope">
+          <select
+            id="scope"
+            :value="scope"
+            @change="onScopeSelect($event.target.value)"
+          >
             <option value="world">世界级</option>
             <option value="nation">国家级</option>
             <option value="region">地区级</option>
             <option value="local">局部级</option>
           </select>
+          <span v-if="manualScope" class="auto-hint">
+            手动模式
+            <button class="link-btn" @click="backToAuto">恢复自动</button>
+          </span>
+          <span v-else class="auto-hint">跟随缩放自动切换</span>
         </div>
         <div class="legend">
           <span><i style="background:#5a7a96"></i>道界</span>
@@ -159,7 +201,14 @@ onMounted(boot);
           <span><i style="background:rgba(214,62,42,.62)"></i>严重缺粮</span>
         </div>
       </div>
-      <MapView :regions="regions" :selected="selected" @select="selectRegion" />
+      <MapView
+        :regions="regions"
+        :selected="selected"
+        :scale="scope"
+        :factions="factions"
+        @select="selectRegion"
+        @zoom-change="onZoomChange"
+      />
     </section>
 
     <aside class="side-panel">
@@ -185,8 +234,23 @@ onMounted(boot);
       </div>
 
       <div class="panel-block">
-        <h2>地区详情</h2>
-        <RegionDetail :region="region" @act="onAct" />
+        <h2>{{ macro ? "势力概览" : "地区详情" }}</h2>
+        <div v-if="macro" class="unit-list">
+          <div v-for="u in units" :key="u.key" class="unit">
+            <div class="unit-name">{{ u.name }}</div>
+            <div class="unit-meta">{{ u.metrics.region_count }} 道 · 人口 {{ Math.round(u.metrics.population).toLocaleString() }}</div>
+            <div class="unit-row">
+              <span>存粮 {{ Math.round(u.metrics.grain_stock).toLocaleString() }} 石</span>
+              <span>粮价 {{ u.metrics.price_index.toFixed(2) }}</span>
+            </div>
+            <div class="unit-row">
+              <span>民变峰值 {{ u.metrics.unrest_max.toFixed(2) }}</span>
+              <span v-if="u.metrics.treasury != null">府库 {{ Math.round(u.metrics.treasury).toLocaleString() }}</span>
+            </div>
+          </div>
+          <p class="hint">宏观视角按势力聚合，缩放地图可自动切换尺度。</p>
+        </div>
+        <RegionDetail v-else :region="region" @act="onAct" />
       </div>
 
       <div class="panel-block grow">
