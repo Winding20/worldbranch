@@ -1,4 +1,4 @@
-"""应用工厂。"""
+﻿"""应用工厂。"""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     CORS(app, resources={r"/api/*": {"origins": cfg.CORS_ORIGINS or "*"}})
 
-    db = Database(cfg.DATABASE_URL, echo=cfg.DEBUG)
+    db = Database(cfg.DATABASE_URL, echo=cfg.SQL_ECHO)
     app.extensions["worldbranch_db"] = db
 
     from .api import register_blueprints

@@ -1,4 +1,4 @@
-"""模拟引擎：按规则推进时间、更新状态、生成事件。
+﻿"""模拟引擎：按规则推进时间、更新状态、生成事件。
 
 引擎只负责「算」，不做任何叙述性生成；AI 分析属于后续层。
 所有随机都来自按 (seed, tick) 派生的独立随机源，保证同一分支可复现。
@@ -114,11 +114,22 @@ class SimulationEngine:
             to_date=from_date,
         )
 
+        # 性能要点：远程数据库每次往返约 30-40ms，逐 tick 写库会让「推进 24 个月」
+        # 变成上百次往返（实测 4.4 秒）。这里把事件与快照全部在内存里攒成
+        # 普通字典，最后用 Core 批量 INSERT 一次写入。
+        # 用 ORM 对象的话，SQLAlchemy 为了取回自增主键会把批量插入退化成逐条
+        # INSERT，往返次数仍然随月数线性增长；走 Core 就不需要回填主键。
+        pending_events: list[dict] = []
+        pending_snapshots: list[dict] = []
+        self._pending_events = pending_events
+
         for step in range(months):
             self._tick(branch, regions, factions, step, profile, report)
             branch.current_date = add_months(branch.current_date, 1)
             branch.tick_index += 1
-            self._save_snapshot(branch, regions, factions)
+            pending_snapshots.append(
+                self._make_snapshot(branch, regions, factions)
+            )
 
         report.to_date = branch.current_date
         report.region_states = [r.snapshot() for r in regions]
@@ -132,6 +143,12 @@ class SimulationEngine:
             }
             for f in factions.values()
         ]
+
+        with self.session.no_autoflush:
+            if pending_events:
+                self.session.execute(SimEvent.__table__.insert(), pending_events)
+            if pending_snapshots:
+                self.session.execute(Snapshot.__table__.insert(), pending_snapshots)
         self.session.flush()
         return report
 
@@ -360,68 +377,65 @@ class SimulationEngine:
     ) -> None:
         if severity < min_severity:
             return
-        event = SimEvent(
-            branch_id=branch.id,
-            game_date=branch.current_date,
-            tick_index=branch.tick_index,
-            scope=scope,
-            kind=kind,
-            severity=severity,
-            title=title,
-            summary=summary,
-            region_keys=list(region_keys),
-            faction_keys=list(faction_keys),
-            causes=causes,
-            metrics=metrics,
+        region_list = list(region_keys)
+        faction_list = list(faction_keys)
+        # 先攒成待插入的行（字典），由 advance() 用 Core 批量写入，
+        # 避免逐条往返远程数据库
+        self._pending_events.append(
+            {
+                "branch_id": branch.id,
+                "game_date": branch.current_date,
+                "tick_index": branch.tick_index,
+                "scope": scope,
+                "kind": kind,
+                "severity": severity,
+                "duration_months": 1,
+                "title": title,
+                "summary": summary,
+                "region_keys": region_list,
+                "faction_keys": faction_list,
+                "causes": causes,
+                "metrics": metrics,
+            }
         )
-        self.session.add(event)
         report.events.append(
             {
-                "game_date": format_date(event.game_date),
+                "game_date": format_date(branch.current_date),
                 "scope": scope,
                 "kind": kind,
                 "severity": severity,
                 "title": title,
                 "summary": summary,
-                "region_keys": event.region_keys,
-                "faction_keys": event.faction_keys,
+                "region_keys": region_list,
+                "faction_keys": faction_list,
                 "causes": causes,
                 "metrics": metrics,
             }
         )
 
     # ---------------------------------------------------------------- #
-    def _save_snapshot(
+    def _make_snapshot(
         self,
         branch: Branch,
         regions: list[RegionState],
         factions: dict[str, FactionState],
-    ) -> None:
-        exists = self.session.scalar(
-            select(Snapshot.id).where(
-                Snapshot.branch_id == branch.id,
-                Snapshot.tick_index == branch.tick_index,
-            )
-        )
-        if exists:
-            return
-        self.session.add(
-            Snapshot(
-                branch_id=branch.id,
-                game_date=branch.current_date,
-                tick_index=branch.tick_index,
-                state={
-                    "date": branch.current_date.isoformat(),
-                    "precision": branch.precision,
-                    "regions": [r.snapshot() for r in regions],
-                    "factions": [
-                        {
-                            "faction_key": f.faction_key,
-                            "treasury": round(f.treasury, 2),
-                            "legitimacy": round(f.legitimacy, 4),
-                        }
-                        for f in factions.values()
-                    ],
-                },
-            )
-        )
+    ) -> dict:
+        """构造当前 tick 的快照对象（不落库，由 advance 统一批量写入）。"""
+        return {
+            "branch_id": branch.id,
+            "game_date": branch.current_date,
+            "tick_index": branch.tick_index,
+            "state": {
+                "date": format_date(branch.current_date),
+                "precision": branch.precision,
+                "regions": [r.snapshot() for r in regions],
+                "factions": [
+                    {
+                        "faction_key": f.faction_key,
+                        "treasury": round(f.treasury, 2),
+                        "legitimacy": round(f.legitimacy, 4),
+                    }
+                    for f in factions.values()
+                ],
+            },
+        }

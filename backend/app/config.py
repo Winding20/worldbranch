@@ -1,4 +1,4 @@
-"""应用配置。"""
+﻿"""应用配置。"""
 
 from __future__ import annotations
 
@@ -25,6 +25,8 @@ class Config:
 
     DATABASE_URL: str = os.getenv("WORLDBRANCH_DATABASE_URL") or _default_sqlite_uri()
     DEBUG: bool = os.getenv("WORLDBRANCH_DEBUG", "0") == "1"
+    #: 是否打印每条 SQL（调试用，平时关掉，否则日志会淹没输出）
+    SQL_ECHO: bool = os.getenv("WORLDBRANCH_SQL_ECHO", "0") == "1"
     CORS_ORIGINS: list[str] = [
         o.strip()
         for o in os.getenv(

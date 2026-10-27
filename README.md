@@ -46,6 +46,36 @@ python run.py
 
 然后打开 <http://127.0.0.1:5210/>
 
+### 数据库
+
+开发期连接的是**腾讯云服务器上的 MySQL**（5.7.44 / utf8mb4），连接串写在
+`backend/.env`（已 gitignore，不会进仓库）。换库只改这一行：
+
+```
+WORLDBRANCH_DATABASE_URL=mysql+pymysql://用户:密码@主机:3306/库名?charset=utf8mb4
+```
+
+不配置时回退到本地 SQLite（`backend/instance/worldbranch.db`），测试用的就是它。
+
+连接出问题先跑诊断脚本，它会把失败分成"网络 / 认证 / 库不存在 / 字符集"几类：
+
+```powershell
+python tools\test_db.py
+```
+
+### 性能
+
+远程数据库单次往返约 36 ms，所以引擎做了两处批处理（见 `engine/simulation.py`）：
+
+- 事件与快照在内存里攒成字典，最后统一写入；
+- 用 Core `insert()` 而不是 ORM 对象，避免 SQLAlchemy 为取回自增主键而退化成逐条插入。
+
+实测「推进 24 个月」从 4366 ms 降到 275 ms，且耗时不再随月数线性增长。
+
+```powershell
+python tools\bench_advance.py 60    # 计时
+```
+
 ## 核心概念
 
 | 概念 | 含义 |
