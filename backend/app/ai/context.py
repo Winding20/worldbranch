@@ -1,4 +1,4 @@
-"""把引擎已经记录的事实整理成给模型看的材料。
+﻿"""把引擎已经记录的事实整理成给模型看的材料。
 
 **这一层不产生任何新数据**，只做筛选、排序与格式化。
 设计文档要求：AI 的解释必须建立在真实模拟记录上，而不是让模型自由发挥。
@@ -12,12 +12,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import (
+    ArmyState,
     Branch,
+    CharacterState,
     FactionState,
     RegionState,
     SimEvent,
     World,
 )
+from ..engine.decisions import pending_decisions
+from ..engine.history import history_status
+from ..engine.loyalty import loyalty_overview
+from ..engine.military import all_powers
 from ..services import build_event_chain
 from ..utils import format_date
 from . import knowledge
@@ -112,12 +118,91 @@ def build_context(
         },
         "regions": _region_lines(regions),
         "factions": _faction_lines(factions),
+        "army_lines": _army_lines(session, branch),
+        "loyalty_lines": _loyalty_lines(session, branch),
+        "pending_decisions": _decision_lines(session, branch),
+        "history_lines": _history_lines(session, branch),
         "recent_events": [_event_line(e) for e in recent],
         "focus_event": focus_event,
         "cause_chain": chain_nodes,
         "knowledge": snippets,
         "citation_list": knowledge.citations(snippets),
     }
+
+
+def _army_lines(session: Session, branch: Branch) -> list[str]:
+    """各军兵力与主帅。只列已成的军，未成军的不报。"""
+    armies = list(
+        session.scalars(select(ArmyState).where(ArmyState.branch_id == branch.id))
+    )
+    if not armies:
+        return []
+    characters = {
+        c.character_key: c
+        for c in session.scalars(
+            select(CharacterState).where(CharacterState.branch_id == branch.id)
+        )
+    }
+    lines = []
+    for power in all_powers(armies, characters):
+        if power.troops <= 0:
+            continue
+        lines.append(
+            f"- {power.name}（{power.commander_name}）：兵 {power.troops:,}，"
+            f"士气 {power.morale:.2f}，补给 {power.supply:.2f}，战力 {power.power:,.0f}"
+        )
+    return lines
+
+
+def _loyalty_lines(session: Session, branch: Branch) -> list[str]:
+    armies = {
+        a.army_key: a
+        for a in session.scalars(
+            select(ArmyState).where(ArmyState.branch_id == branch.id)
+        )
+    }
+    characters = {
+        c.character_key: c
+        for c in session.scalars(
+            select(CharacterState).where(CharacterState.branch_id == branch.id)
+        )
+    }
+    if not characters:
+        return []
+    rows = loyalty_overview(characters, armies)
+    return [
+        f"- {r['name']}（{r['office'] or '无官职'}）：忠诚 {r['loyalty']:.2f}，"
+        f"野心 {r['ambition']:.2f}，统兵 {r['troops']:,}，状态 {r['status']}"
+        for r in rows[:8]
+    ]
+
+
+def _decision_lines(session: Session, branch: Branch) -> list[str]:
+    decisions = pending_decisions(session, branch.id)
+    if not decisions:
+        return []
+    lines = []
+    for d in decisions:
+        advice = "；".join(
+            f"{a['name']}主{a['option_label']}" for a in (d.advice or [])
+        )
+        lines.append(
+            f"- {d.title}：{d.description}"
+            + (f" 朝议：{advice}。" if advice else "")
+        )
+    return lines
+
+
+def _history_lines(session: Session, branch: Branch) -> list[str]:
+    status = history_status(session, branch.id)
+    lines = [
+        f"- 已应验：{item['title']}（{item['date']}）" for item in status["fired"][-6:]
+    ]
+    lines += [
+        f"- 已改道：{item['title']}（{item['date']}，原因：{item['reason']}）"
+        for item in status["diverged"][-6:]
+    ]
+    return lines
 
 
 SYSTEM_PROMPT = """你是 WorldBranch 的世界推演分析助手。
@@ -127,6 +212,10 @@ SYSTEM_PROMPT = """你是 WorldBranch 的世界推演分析助手。
 2. 数值直接引用材料里的值；材料没给的就明确说"材料中没有"，不要估算一个看起来合理的数字。
 3. 材料里的数值多数是量级估算或模拟假设，引用时要保留可信度提示。
 4. 解释因果时，必须沿着材料给出的因果链说明，不要自行发明因果。
+5. 材料里的【人物忠诚】【朝议】是按模拟规则推出来的立场与估值，不是史料原文；
+   引用时要说明这是推演结果，不要说成"史书如何记载"。
+6. 【史实对照】里分为"已应验"与"已改道"：应验的是按史载发生的，
+   改道的是因前提变化而没有发生的，两者不能混为一谈。
 5. 用简体中文回答，条理清晰，控制在 400 字以内。
 6. 如果问题超出材料范围，直接说明缺什么材料，以及需要补充什么资料。"""
 
@@ -152,6 +241,22 @@ def format_context(ctx: dict[str, Any]) -> str:
 
     lines.append("\n【势力状况】")
     lines.extend(ctx["factions"] or ["- 无"])
+
+    if ctx.get("army_lines"):
+        lines.append("\n【各军】")
+        lines.extend(ctx["army_lines"])
+
+    if ctx.get("loyalty_lines"):
+        lines.append("\n【人物忠诚】")
+        lines.extend(ctx["loyalty_lines"])
+
+    if ctx.get("pending_decisions"):
+        lines.append("\n【当前待决事项】")
+        lines.extend(ctx["pending_decisions"])
+
+    if ctx.get("history_lines"):
+        lines.append("\n【史实对照】")
+        lines.extend(ctx["history_lines"])
 
     lines.append("\n【近期事件】")
     lines.extend(ctx["recent_events"] or ["- 暂无"])

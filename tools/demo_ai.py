@@ -1,4 +1,4 @@
-"""演示 AI 分析层：看看真正会送给模型的是什么材料。
+﻿"""演示 AI 分析层：看看真正会送给模型的是什么材料。
 
     python tools/demo_ai.py
 """
@@ -25,20 +25,15 @@ def call(path: str, method: str = "GET", payload: dict | None = None, headers=No
 
 
 def main() -> int:
+    world_key = sys.argv[1] if len(sys.argv) > 1 else "tang_755"
     branch = call(
-        "/api/worlds/tang_750/branches",
+        f"/api/worlds/{world_key}/branches",
         "POST",
         {"precision": "standard", "seed": 3, "name": "AI 演示"},
     )
     bid = branch["id"]
 
-    # 制造一次冲击并推进，让材料里有真实内容
-    call(
-        f"/api/branches/{bid}/actions",
-        "POST",
-        {"kind": "shock", "region_key": "hebei", "params": {"damage_ratio": 0.75}},
-    )
-    call(f"/api/branches/{bid}/advance", "POST", {"months": 3})
+    call(f"/api/branches/{bid}/advance", "POST", {"months": 8})
 
     events = call(f"/api/branches/{bid}/events?limit=50")
     focus = next((e for e in events if e["kind"] == "grain_flow"), None)

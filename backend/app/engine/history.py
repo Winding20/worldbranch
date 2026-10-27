@@ -15,6 +15,7 @@ from typing import Any, Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..utils import format_date
 from .counsel import attach_advice
 from ..models import (
     ArmyState,
@@ -436,14 +437,41 @@ def history_status(session: Session, branch_id: int) -> dict[str, Any]:
             .order_by(HistoricalFire.id)
         )
     )
+    # 补上标题，界面与 AI 材料里直接读得懂
+    # 显示用史实自身的年月，而不是"引擎发现它"的那一个月
+    templates = {
+        e.key: e
+        for e in session.scalars(
+            select(HistoricalEvent).where(
+                HistoricalEvent.world_id == session.get(Branch, branch_id).world_id
+            )
+        )
+    }
+
+    def _title(key: str) -> str:
+        event = templates.get(key)
+        return event.title if event else key
+
+    def _date(key: str, fallback: dt.date) -> str:
+        event = templates.get(key)
+        return format_date(event.date if event else fallback)
     return {
         "fired": [
-            {"key": r.event_key, "date": r.game_date.isoformat()}
+            {
+                "key": r.event_key,
+                "title": _title(r.event_key),
+                "date": _date(r.event_key, r.game_date),
+            }
             for r in rows
             if r.status == "fired"
         ],
         "diverged": [
-            {"key": r.event_key, "date": r.game_date.isoformat(), "reason": r.note}
+            {
+                "key": r.event_key,
+                "title": _title(r.event_key),
+                "date": _date(r.event_key, r.game_date),
+                "reason": r.note,
+            }
             for r in rows
             if r.status == "diverged"
         ],

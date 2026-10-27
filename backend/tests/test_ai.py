@@ -93,6 +93,38 @@ def test_context_includes_focus_event_and_chain(db_session, branch):
     assert shock.title in text
 
 
+def test_context_includes_military_and_court(db_session):
+    """AI 材料里应当能看到兵力、忠诚、待决事项与史实对照。"""
+    from app.engine import SimulationEngine
+    from app.services import create_branch, get_world_by_key
+
+    world = get_world_by_key(db_session, "tang_755")
+    if world is None:
+        from app.seed import anlushan_755
+
+        world = anlushan_755.seed(db_session)
+        db_session.flush()
+
+    branch = create_branch(db_session, world, name="AI材料", seed=5)
+    SimulationEngine(db_session).advance(branch, months=8)
+
+    ctx = build_context(db_session, branch, question="潼关守得住吗")
+    text = format_context(ctx)
+
+    assert ctx["army_lines"], "应列出各军"
+    assert "战力" in text
+    assert "【各军】" in text
+    assert "【人物忠诚】" in text
+    assert "【史实对照】" in text
+
+
+def test_system_prompt_marks_derived_data():
+    from app.ai.context import SYSTEM_PROMPT
+
+    assert "不是史料原文" in SYSTEM_PROMPT
+    assert "已改道" in SYSTEM_PROMPT
+
+
 def test_context_rejects_foreign_event(db_session, branch):
     with pytest.raises(LookupError):
         build_context(db_session, branch, event_id=999999)
