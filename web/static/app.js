@@ -34,25 +34,42 @@
   // ---------------------------------------------------------------- //
   // 投影：经纬度 -> SVG 坐标
   // ---------------------------------------------------------------- //
+
+  /** 取出一个地区的所有多边形（每个多边形是「环的数组」，环是 [lon,lat] 列表）。 */
+  function polygonsOf(region) {
+    const geo = region.geo;
+    if (!geo || !Array.isArray(geo.coordinates)) return [];
+    if (geo.type === "Polygon") return [geo.coordinates];
+    if (geo.type === "MultiPolygon") return geo.coordinates;
+    return [];
+  }
+
   function buildProjection(regions) {
-    const pts = [];
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+
     regions.forEach((r) => {
-      const poly = r.geo && r.geo.coordinates && r.geo.coordinates[0];
-      if (Array.isArray(poly)) {
-        poly.forEach(([lon, lat]) => pts.push([lon, lat]));
-      } else if (typeof r.lon === "number" && typeof r.lat === "number") {
-        pts.push([r.lon, r.lat]);
+      polygonsOf(r).forEach((poly) => {
+        (poly[0] || []).forEach(([lon, lat]) => {
+          if (lon < minLon) minLon = lon;
+          if (lon > maxLon) maxLon = lon;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        });
+      });
+      if (Number.isFinite(r.lon) && Number.isFinite(r.lat)) {
+        if (r.lon < minLon) minLon = r.lon;
+        if (r.lon > maxLon) maxLon = r.lon;
+        if (r.lat < minLat) minLat = r.lat;
+        if (r.lat > maxLat) maxLat = r.lat;
       }
     });
-    if (!pts.length) return null;
 
-    const lons = pts.map((p) => p[0]);
-    const lats = pts.map((p) => p[1]);
-    const minLon = Math.min(...lons);
-    const maxLon = Math.max(...lons);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const pad = 40;
+    if (!Number.isFinite(minLon)) return null;
+
+    const pad = 26;
     const spanLon = Math.max(maxLon - minLon, 0.001);
     const spanLat = Math.max(maxLat - minLat, 0.001);
     const scale = Math.min((VB.w - pad * 2) / spanLon, (VB.h - pad * 2) / spanLat);
@@ -60,6 +77,11 @@
     const offY = (VB.h - spanLat * scale) / 2;
 
     return {
+      minLon,
+      minLat,
+      maxLon,
+      maxLat,
+      scale,
       toXY(lon, lat) {
         return [offX + (lon - minLon) * scale, offY + (maxLat - lat) * scale];
       },
@@ -67,15 +89,43 @@
   }
 
   // ---------------------------------------------------------------- //
-  // 配色：按粮价指数
+  // 配色：道身份色 + 粮价压力叠加
   // ---------------------------------------------------------------- //
-  function priceColor(price) {
-    const p = Math.max(0.6, Math.min(price, 4));
-    const t = (p - 0.6) / 3.4; // 0 = 便宜, 1 = 昂贵
-    const r = Math.round(58 + t * 170);
-    const g = Math.round(120 - t * 60);
-    const b = Math.round(150 - t * 110);
-    return `rgb(${r},${g},${b})`;
+  // 一个「道」由多个现代省多边形拼成。如果所有道用同一种数据色，
+  // 内部接缝被第二遍填充盖掉后，整张图会糊成一团、分不清边界。
+  // 所以底色用「道身份色」区分势力范围，粮价压力另用红色叠加表达。
+  const REGION_COLORS = {
+    guannei: [86, 118, 150],
+    henan: [104, 132, 108],
+    hebei: [138, 110, 92],
+    hedong: [120, 104, 142],
+    huainan: [96, 138, 132],
+    jiangnan: [128, 116, 150],
+    longyou: [102, 112, 128],
+  };
+  const FALLBACK_COLOR = [104, 118, 132];
+
+  //: 标签位置。治所（如扬州、越州）多在辖区边缘，直接用会把字压到邻道去，
+  //: 所以给每个道单独指定一个"文字锚点"。
+  const LABEL_AT = {
+    guannei: [108.6, 33.4],
+    henan: [114.8, 33.9],
+    hebei: [116.6, 39.4],
+    hedong: [112.3, 37.6],
+    huainan: [117.0, 32.2],
+    jiangnan: [116.8, 27.6],
+    longyou: [97.0, 38.6],
+  };
+
+  function baseColor(key) {
+    const c = REGION_COLORS[key] || FALLBACK_COLOR;
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  }
+
+  /** 粮价压力：1.0 以下无叠加，越贵越红，最高 0.62 不透明。 */
+  function stressAlpha(price) {
+    const t = Math.max(0, Math.min((price - 1.0) / 1.6, 1));
+    return +(t * 0.62).toFixed(3);
   }
 
   // ---------------------------------------------------------------- //
@@ -88,17 +138,21 @@
     return node;
   };
 
-  function pathFromGeo(region, proj) {
-    const poly = region.geo && region.geo.coordinates && region.geo.coordinates[0];
-    if (!Array.isArray(poly) || !poly.length) return null;
-    return (
-      poly
+  /** 把一个地区的所有多边形拼成一条 path 的 d 属性（可能含多个子路径）。 */
+  function pathData(region, proj) {
+    const parts = [];
+    polygonsOf(region).forEach((poly) => {
+      const ring = poly[0]; // 只画外环；本数据集的孔洞可忽略
+      if (!Array.isArray(ring) || ring.length < 3) return;
+      const d = ring
         .map(([lon, lat], i) => {
           const [x, y] = proj.toXY(lon, lat);
           return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
         })
-        .join(" ") + " Z"
-    );
+        .join(" ");
+      parts.push(d + " Z");
+    });
+    return parts.join(" ") || null;
   }
 
   function renderMap() {
@@ -110,19 +164,82 @@
     if (!state.projection) return;
     const proj = state.projection;
 
-    state.regions.forEach((region) => {
-      const d = pathFromGeo(region, proj);
-      if (!d) return;
+    const shapes = state.regions
+      .map((region) => ({ region, d: pathData(region, proj) }))
+      .filter((s) => s.d);
+
+    // 两遍绘制：先描边、后填充。
+    // 一个「道」由多个现代省的多边形组成，内部接缝要靠第二遍填充盖掉，
+    // 这样整条道看起来是一个整体，只有外轮廓留有描边。
+    shapes.forEach(({ region, d }) => {
+      layer.appendChild(
+        el("path", {
+          d,
+          fill: baseColor(region.region_key),
+          stroke: "#0a0f14",
+          "stroke-width": 1.6,
+          "stroke-linejoin": "round",
+        })
+      );
+    });
+    shapes.forEach(({ region, d }) => {
+      layer.appendChild(
+        el("path", {
+          d,
+          fill: baseColor(region.region_key),
+          stroke: "none",
+        })
+      );
+    });
+
+    // 粮价压力叠加层：红色越浓，说明该道粮价越高
+    shapes.forEach(({ region, d }) => {
+      const alpha = stressAlpha(region.price_index || 1);
+      if (alpha <= 0) return;
+      layer.appendChild(
+        el("path", {
+          d,
+          fill: `rgba(214, 62, 42, ${alpha})`,
+          stroke: "none",
+          "pointer-events": "none",
+        })
+      );
+    });
+
+    // 交互层：放在最上面接收点击
+    shapes.forEach(({ region, d }) => {
       const path = el("path", {
         d,
-        class: "region-path" + (state.selected === region.region_key ? " selected" : ""),
-        fill: priceColor(region.price_index || 1),
+        class: "region-path",
+        fill: "transparent",
+        stroke: "none",
         "data-key": region.region_key,
       });
       path.addEventListener("click", () => selectRegion(region.region_key));
+      path.appendChild(el("title")).textContent = region.name;
       layer.appendChild(path);
+    });
 
-      const [cx, cy] = proj.toXY(region.lon, region.lat);
+    // 选中高亮
+    const selected = shapes.find((s) => s.region.region_key === state.selected);
+    if (selected) {
+      layer.appendChild(
+        el("path", {
+          d: selected.d,
+          fill: "none",
+          stroke: "#4aa8d8",
+          "stroke-width": 3,
+          "pointer-events": "none",
+        })
+      );
+    }
+
+    // 标签：位置用预设的文字锚点，避免压在邻道上
+    shapes.forEach(({ region }) => {
+      const anchor = LABEL_AT[region.region_key];
+      const [cx, cy] = anchor
+        ? proj.toXY(anchor[0], anchor[1])
+        : proj.toXY(region.lon, region.lat);
       const label = el("text", {
         x: cx,
         y: cy - 2,
@@ -148,9 +265,9 @@
 
   function updateLegend() {
     $("legend").innerHTML = `
-      <span><i style="background:rgb(58,120,150)"></i>粮价平稳</span>
-      <span><i style="background:rgb(160,90,70)"></i>粮价偏高</span>
-      <span><i style="background:rgb(228,60,40)"></i>严重缺粮</span>`;
+      <span><i style="background:#5a7a96"></i>道界</span>
+      <span><i style="background:rgba(214,62,42,.25)"></i>粮价偏高</span>
+      <span><i style="background:rgba(214,62,42,.62)"></i>严重缺粮</span>`;
   }
 
   function applyTransform() {

@@ -22,8 +22,11 @@ def test_world_detail_has_regions_and_geo(client):
     data = resp.get_json()
     assert len(data["regions"]) == 7
     region = data["regions"][0]
-    assert region["geo"]["type"] == "Polygon"
+    # 地理轮廓由现代省界近似拼成，因此是 MultiPolygon
+    assert region["geo"]["type"] == "MultiPolygon"
+    assert region["geo"]["coordinates"], "几何数据不应为空"
     assert region["data_quality"]["population"] == "estimate"
+    assert region["data_quality"]["geo"] == "approximate"
 
 
 def test_world_not_found(client):
