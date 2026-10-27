@@ -211,3 +211,166 @@ def faction_meta(session: Session, world_id: int) -> dict[str, dict]:
             "capital_region_key": faction.capital_region_key,
         }
     return out
+
+
+# --------------------------------------------------------------------------- #
+# 用户干预
+# --------------------------------------------------------------------------- #
+class ActionError(ValueError):
+    pass
+
+
+#: 支持的用户干预类型
+ACTION_KINDS = ("shock", "relief", "tax")
+
+
+def apply_action(
+    session: Session,
+    branch: Branch,
+    kind: str,
+    region_key: str,
+    params: dict,
+) -> SimEvent:
+    """用户在某一时刻对世界施加的干预。
+
+    干预是"因果链的起点"：它会写入一条事件，后续由它引发的粮荒、调运
+    都会把这条事件挂成原因，于是用户能在界面上看到自己造成了什么。
+    """
+    if kind not in ACTION_KINDS:
+        raise ActionError(f"不支持的干预类型: {kind}")
+
+    state = session.scalar(
+        select(RegionState).where(
+            RegionState.branch_id == branch.id,
+            RegionState.region_key == region_key,
+        )
+    )
+    if state is None:
+        raise LookupError(f"地区不存在: {region_key}")
+
+    title = ""
+    summary = ""
+    kind_code = ""
+    metrics: dict = {"region_key": region_key}
+
+    if kind == "shock":
+        ratio = float(params.get("damage_ratio", 0.5))
+        if not 0 < ratio <= 1:
+            raise ActionError("damage_ratio 必须在 (0, 1] 之间")
+        lost = state.grain_stock * ratio
+        state.grain_stock = max(state.grain_stock - lost, 0.0)
+        kind_code = "user_shock"
+        title = f"（干预）{state.name}歉收"
+        summary = (
+            f"用户在该道制造了一次歉收：当季存粮减少 {lost:,.0f} 石"
+            f"（约 {ratio * 100:.0f}%）。"
+        )
+        metrics.update({"damage_ratio": ratio, "lost": round(lost, 1)})
+
+    elif kind == "relief":
+        amount = float(params.get("amount", 0))
+        if amount <= 0:
+            raise ActionError("amount 必须大于 0")
+        price = state.price_index
+        state.grain_stock += amount
+        faction = session.scalar(
+            select(FactionState).where(
+                FactionState.branch_id == branch.id,
+                FactionState.faction_key == state.faction_key,
+            )
+        ) if state.faction_key else None
+        cost = amount * price
+        if faction is not None:
+            faction.treasury -= cost
+        kind_code = "user_relief"
+        title = f"（干预）{state.name}开仓赈济"
+        summary = (
+            f"用户调拨 {amount:,.0f} 石粮食进入{state.name}，"
+            f"按当季粮价折合支出 {cost:,.0f} 贯。"
+        )
+        metrics.update({"amount": amount, "cost": round(cost, 1)})
+
+    else:  # tax
+        rate = float(params.get("rate", state.tax_rate))
+        if not 0 <= rate <= 0.5:
+            raise ActionError("税率必须在 0~0.5 之间")
+        old = state.tax_rate
+        state.tax_rate = rate
+        kind_code = "user_tax"
+        title = f"（干预）{state.name}税率调整"
+        summary = f"用户把{state.name}的税率从 {old * 100:.0f}% 调整为 {rate * 100:.0f}%。"
+        metrics.update({"from": old, "to": rate})
+
+    event = SimEvent(
+        branch_id=branch.id,
+        game_date=branch.current_date,
+        tick_index=branch.tick_index,
+        scope="region",
+        kind=kind_code,
+        severity=3,
+        duration_months=1,
+        title=title,
+        summary=summary,
+        region_keys=[region_key],
+        faction_keys=[state.faction_key] if state.faction_key else [],
+        causes=[{"rule": "user_action", "kind": kind}],
+        metrics=metrics,
+    )
+    session.add(event)
+    session.flush()
+    return event
+
+
+# --------------------------------------------------------------------------- #
+# 因果链
+# --------------------------------------------------------------------------- #
+def cause_event_ids(event: SimEvent) -> list[int]:
+    """从事件的 causes 里挑出指向其它事件的 id。"""
+    ids: list[int] = []
+    for cause in event.causes or []:
+        if isinstance(cause, dict) and isinstance(cause.get("event_id"), int):
+            ids.append(cause["event_id"])
+    return ids
+
+
+def build_event_chain(
+    session: Session,
+    branch_id: int,
+    event_id: int,
+    *,
+    max_depth: int = 6,
+) -> dict:
+    """回溯一个事件的上游因果链。
+
+    设计文档要求：影响必须由规则和数据支持，不能仅凭 AI 叙述。
+    因此「为什么发生」是从事件记录里查出来的，而不是让模型编。
+    """
+    root = session.get(SimEvent, event_id)
+    if root is None or root.branch_id != branch_id:
+        raise LookupError(f"事件不存在: {event_id}")
+
+    nodes: dict[int, dict] = {}
+    edges: list[dict] = []
+    frontier = [root]
+    depth_map = {root.id: 0}
+
+    while frontier:
+        current = frontier.pop()
+        nodes[current.id] = current.to_dict()
+        depth = depth_map[current.id]
+        if depth >= max_depth:
+            continue
+        for parent_id in cause_event_ids(current):
+            parent = session.get(SimEvent, parent_id)
+            if parent is None or parent.branch_id != branch_id:
+                continue
+            edges.append({"from": parent_id, "to": current.id, "rel": "cause"})
+            if parent_id not in depth_map:
+                depth_map[parent_id] = depth + 1
+                frontier.append(parent)
+
+    return {
+        "root_id": event_id,
+        "nodes": sorted(nodes.values(), key=lambda n: (n["game_date"], n["id"])),
+        "edges": edges,
+    }

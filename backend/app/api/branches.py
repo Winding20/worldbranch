@@ -10,6 +10,8 @@ from ..engine import SimulationEngine
 from ..models import FactionState, RegionState, SimEvent, Snapshot
 from ..utils import format_date
 from ..services import (
+    apply_action,
+    build_event_chain,
     faction_meta,
     fork_branch,
     get_branch,
@@ -118,6 +120,32 @@ def events(branch_id: int):
             if SCOPE_ORDER.get(e.scope, 1) >= threshold
         ]
         return jsonify([e.to_dict() for e in rows])
+
+
+@bp.post("/<int:branch_id>/actions")
+def apply_action_route(branch_id: int):
+    """用户干预：制造歉收、开仓赈济、调整税率。
+
+    干预是因果链的起点——它之后引发的粮荒、调运都能追溯到这条事件。
+    """
+    payload = request.get_json(silent=True) or {}
+    kind = payload.get("kind", "")
+    region_key = payload.get("region_key", "")
+    params = payload.get("params") or {}
+
+    with get_db().session() as session:
+        branch = get_branch(session, branch_id)
+        event = apply_action(session, branch, kind, region_key, params)
+        return jsonify(event.to_dict()), 201
+
+
+@bp.get("/<int:branch_id>/events/<int:event_id>/chain")
+def event_chain(branch_id: int, event_id: int):
+    """回溯某个事件的上游因果链（谁导致了它，再往上是谁）。"""
+    depth = min(int(request.args.get("depth", 6)), 12)
+    with get_db().session() as session:
+        get_branch(session, branch_id)
+        return jsonify(build_event_chain(session, branch_id, event_id, max_depth=depth))
 
 
 @bp.get("/<int:branch_id>/snapshots")

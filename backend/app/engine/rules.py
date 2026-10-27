@@ -1,4 +1,4 @@
-"""模拟规则：纯函数，不碰数据库、不碰随机数。
+﻿"""模拟规则：纯函数，不碰数据库、不碰随机数。
 
 把「条件变化后会发生什么」写成可执行、可单测的公式，
 是设计文档里「模拟规则」这一层的落地。
@@ -32,10 +32,10 @@ PRICE_ELASTICITY = 0.55
 SAFE_STOCK_MONTHS = 4.0
 #: 价格每月回归速度
 PRICE_RECOVERY = 0.25
-#: 单月粮价涨幅上限
-MAX_PRICE_JUMP = 2.5
+#: 单月粮价涨幅上限（饥荒时价格会跳，但不会一个月翻十倍）
+MAX_PRICE_JUMP = 1.9
 #: 粮价封顶
-PRICE_CAP = 12.0
+PRICE_CAP = 6.0
 
 #: 缺粮对民变的推动系数
 UNREST_PER_SHORTAGE = 2.2
@@ -48,6 +48,11 @@ UNREST_PRICE_THRESHOLD = 1.6
 MILITARY_UPKEEP_RATIO = 0.35
 #: 财政赤字对合法性的削弱
 LEGITIMACY_PER_DEFICIT = 0.0004
+
+#: 调出方至少要保住的存粮月数（不能把保命粮卖光）
+EXPORT_SAFETY_MONTHS = 3.0
+#: 每单位粮食跨道调运的默认途耗
+DEFAULT_TRADE_LOSS = 0.08
 
 
 @dataclass(frozen=True)
@@ -164,3 +169,30 @@ def severity_from_ratio(ratio: float) -> int:
     if ratio < 0.8:
         return 4
     return 5
+
+
+# --------------------------------------------------------------------------- #
+# 跨区域调运
+# --------------------------------------------------------------------------- #
+def exportable_surplus(
+    stock: float,
+    consumption: float,
+    safety_months: float = EXPORT_SAFETY_MONTHS,
+) -> float:
+    """调出方最多能拿出多少粮：高于「安全存粮线」的部分才算余粮。"""
+    return max(stock - consumption * safety_months, 0.0)
+
+
+def delivered_amount(amount: float, loss: float = DEFAULT_TRADE_LOSS) -> float:
+    """扣除途耗后实际到达对方手里的粮量。"""
+    return max(amount, 0.0) * (1.0 - max(0.0, min(loss, 0.9)))
+
+
+def price_after_import(price: float, stock_after: float, consumption: float) -> float:
+    """进口方补上粮之后，价格向新的目标价回落（不会一步到位）。"""
+    return price + (target_price(stock_after, consumption) - price) * 0.55
+
+
+def price_after_export(price: float, stock_after: float, consumption: float) -> float:
+    """调出方存粮减少，价格向新的目标价上抬。"""
+    return price + (target_price(stock_after, consumption) - price) * 0.35

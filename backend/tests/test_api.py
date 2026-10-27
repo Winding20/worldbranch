@@ -82,6 +82,28 @@ def test_fork_endpoint(client):
     assert fork["current_date"] == "750-04-01"
 
 
+def test_event_chain_endpoint(client):
+    branch = client.post("/api/worlds/tang_750/branches", json={"seed": 3}).get_json()
+    branch_id = branch["id"]
+    client.post(f"/api/branches/{branch_id}/advance", json={"months": 24})
+
+    events = client.get(f"/api/branches/{branch_id}/events?limit=5").get_json()
+    assert events
+    event_id = events[0]["id"]
+
+    chain = client.get(f"/api/branches/{branch_id}/events/{event_id}/chain")
+    assert chain.status_code == 200
+    body = chain.get_json()
+    assert body["root_id"] == event_id
+    assert any(node["id"] == event_id for node in body["nodes"])
+
+
+def test_event_chain_unknown_event(client):
+    branch = client.post("/api/worlds/tang_750/branches", json={}).get_json()
+    resp = client.get(f"/api/branches/{branch['id']}/events/999999/chain")
+    assert resp.status_code == 404
+
+
 def test_advance_rejects_bad_input(client):
     branch = client.post("/api/worlds/tang_750/branches", json={}).get_json()
     branch_id = branch["id"]

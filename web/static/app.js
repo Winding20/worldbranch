@@ -373,7 +373,54 @@
       <div class="kv"><span>民变指数</span><b>${(region.unrest || 0).toFixed(2)}</b></div>
       <div class="kv"><span>税率</span><b>${((region.tax_rate || 0) * 100).toFixed(0)}%</b></div>
       <div class="kv"><span>所属势力</span><b>${region.faction_key || "—"}</b></div>
+      <div class="actions">
+        <button class="act act-danger" data-act="shock">制造歉收</button>
+        <button class="act" data-act="relief">开仓赈济</button>
+        <button class="act" data-act="tax-down">减税 2%</button>
+        <button class="act" data-act="tax-up">加税 2%</button>
+      </div>
+      <p class="hint act-hint">干预会写进事件流，并成为后续粮荒、调运的因果起点。</p>
     `;
+
+    box.querySelectorAll(".act").forEach((btn) => {
+      btn.addEventListener("click", () => runAction(btn.dataset.act, region));
+    });
+  }
+
+  async function runAction(action, region) {
+    const monthly = region.population * 0.42;
+    let payload = null;
+
+    if (action === "shock") {
+      payload = {
+        kind: "shock",
+        region_key: region.region_key,
+        params: { damage_ratio: 0.6 },
+      };
+    } else if (action === "relief") {
+      payload = {
+        kind: "relief",
+        region_key: region.region_key,
+        params: { amount: Math.round(monthly * 0.8) },
+      };
+    } else if (action === "tax-down" || action === "tax-up") {
+      const delta = action === "tax-up" ? 0.02 : -0.02;
+      const rate = Math.max(0, Math.min(0.5, (region.tax_rate || 0) + delta));
+      payload = { kind: "tax", region_key: region.region_key, params: { rate } };
+    }
+    if (!payload) return;
+
+    try {
+      const event = await api(`/api/branches/${state.branchId}/actions`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      $("advanceHint").textContent = `已记录干预：${event.title}`;
+      await loadState();
+      await loadEvents();
+    } catch (err) {
+      $("advanceHint").textContent = `干预失败：${err.message}`;
+    }
   }
 
   function renderEvents() {
@@ -388,28 +435,92 @@
       return;
     }
     const scopeLabel = { local: "局部", region: "地区", nation: "国家", world: "世界" };
+    const kindLabel = {
+      harvest_shock: "农事灾害",
+      famine: "粮荒",
+      price_spike: "粮价",
+      unrest: "民变",
+      grain_flow: "调运",
+      price_pressure: "外溢",
+      fiscal_crisis: "财政",
+      regional_crisis: "区域危机",
+      local_disturbance: "地方",
+    };
     box.innerHTML = list
       .map((e) => {
         const dots = Array.from({ length: 5 }, (_, i) => `<i class="${i < e.severity ? "on" : ""}"></i>`).join("");
+        const hasCause = (e.causes || []).some((c) => c && c.event_id);
         return `
-          <div class="event-item" data-key="${e.region_keys && e.region_keys[0] ? e.region_keys[0] : ""}">
+          <div class="event-item" data-event="${e.id}" data-key="${e.region_keys && e.region_keys[0] ? e.region_keys[0] : ""}">
             <div class="row1">
               <span class="date">${e.game_date}</span>
               <span class="scope-tag ${e.scope}">${scopeLabel[e.scope] || e.scope}</span>
+              <span class="kind-tag">${kindLabel[e.kind] || e.kind}</span>
+              ${hasCause ? '<span class="cause-flag" title="此事件由其它事件引发">因果</span>' : ""}
               <span class="severity-dots">${dots}</span>
             </div>
             <div class="title">${e.title}</div>
             <div class="summary">${e.summary}</div>
+            <div class="chain-slot"></div>
           </div>`;
       })
       .join("");
 
     box.querySelectorAll(".event-item").forEach((node) => {
-      node.addEventListener("click", () => {
+      node.addEventListener("click", async (ev) => {
+        if (ev.target.closest(".chain-node")) return;
         const key = node.getAttribute("data-key");
         if (key) selectRegion(key);
+        await toggleChain(node);
       });
     });
+  }
+
+  /** 展开/收起某个事件的上游因果链。 */
+  async function toggleChain(node) {
+    const slot = node.querySelector(".chain-slot");
+    if (node.classList.contains("expanded")) {
+      node.classList.remove("expanded");
+      slot.innerHTML = "";
+      return;
+    }
+    node.classList.add("expanded");
+    const eventId = Number(node.getAttribute("data-event"));
+    slot.innerHTML = `<div class="chain-loading">正在追溯因果…</div>`;
+
+    try {
+      const chain = await api(
+        `/api/branches/${state.branchId}/events/${eventId}/chain?depth=6`
+      );
+      const parents = chain.nodes.filter((n) => n.id !== eventId);
+      if (!parents.length) {
+        slot.innerHTML = `<div class="chain-empty">该事件没有上游事件：由规则直接产生（${
+          (node.querySelector(".kind-tag") || {}).textContent || "规则"
+        }）。</div>`;
+        return;
+      }
+      // 按时间正序展示，越靠下越接近当前事件
+      parents.sort((a, b) => (a.game_date < b.game_date ? -1 : a.game_date > b.game_date ? 1 : a.id - b.id));
+      slot.innerHTML =
+        `<div class="chain-title">因果链（由远及近）</div>` +
+        parents
+          .map(
+            (p) => `
+          <div class="chain-node">
+            <span class="chain-date">${p.game_date}</span>
+            <span class="scope-tag ${p.scope}">${scopeTagText(p.scope)}</span>
+            <span class="chain-title-text">${p.title}</span>
+          </div>`
+          )
+          .join("") +
+        `<div class="chain-arrow">↓ 最终导致</div>`;
+    } catch (err) {
+      slot.innerHTML = `<div class="chain-empty">追溯失败：${err.message}</div>`;
+    }
+  }
+
+  function scopeTagText(scope) {
+    return { local: "局部", region: "地区", nation: "国家", world: "世界" }[scope] || scope;
   }
 
   function renderMeta(branch) {

@@ -106,6 +106,40 @@ python tools\bench_advance.py 60    # 计时
 | 精度（Precision） | `macro` / `standard` / `fine` / `deep`，整个世界统一设置 |
 | 事件（Event） | 真实发生的变化，带 `scope`、`severity`、`causes`，不是固定大事/小事标签 |
 | 快照（Snapshot） | 每个 tick 的世界状态，用于复现与对比 |
+| 转运通道（TradeLink） | 两道之间的粮道，带月度运力与途耗 |
+
+## 跨区域因果传导
+
+这是项目的核心机制，不是事后叙述：
+
+```
+用户干预（河北歉收）
+   └─> 河北断粮            （famine）
+         └─> 河南、河东调粮  （grain_flow，带运力上限与途耗）
+               └─> 调出方存粮下降、粮价被推高（price_pressure）
+```
+
+每个事件都在 `causes` 里记录上游事件 id，`GET /events/<id>/chain` 可以一路回溯到
+最初的那次干预。界面上点击事件即可展开这条链。
+
+实测示例（`python tools/demo_chain.py`）：
+
+```
+[干预] （干预）河北道歉收  (event id=1)
+  [750-02-01] famine      河北道出现粮荒      ← step_region, 事件1
+  [750-02-01] grain_flow  河南道调粮至河北道  ← trade_transfer, 事件3
+  [750-02-01] grain_flow  河东道调粮至河北道  ← trade_transfer, 事件3
+
+从「河南道调粮至河北道」回溯因果链（3 个节点）：
+  750-01-01  （干预）河北道歉收
+  750-02-01  河北道出现粮荒
+  750-02-01  河南道调粮至河北道
+```
+
+## 用户干预
+
+界面上点击地区后可以：制造歉收、开仓赈济（花钱买粮）、增减税率。干预会写入事件流，
+并成为后续所有连锁反应的因果起点。
 
 ## API
 
@@ -118,6 +152,8 @@ python tools\bench_advance.py 60    # 计时
 | POST | `/api/worlds/<key>/branches` | 新建分支 |
 | GET | `/api/branches/<id>` | 分支信息 |
 | POST | `/api/branches/<id>/advance` | 推进 N 个月 |
+| POST | `/api/branches/<id>/actions` | 用户干预：制造歉收 / 开仓赈济 / 调整税率 |
+| GET | `/api/branches/<id>/events/<eid>/chain` | 回溯事件的上游因果链 |
 | GET | `/api/branches/<id>/state` | 当前状态 |
 | GET | `/api/branches/<id>/events` | 事件（支持 `min_scope`、`min_severity`） |
 | GET | `/api/branches/<id>/snapshots` | 快照历史 |

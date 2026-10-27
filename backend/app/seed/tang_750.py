@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..engine.rules import GRAIN_PER_CAPITA_MONTH, SEASON_FACTOR
-from ..models import Faction, Region, World
+from ..models import Faction, Region, TradeLink, World
 
 WORLD_KEY = "tang_750"
 START_DATE = dt.date(750, 1, 1)
@@ -105,6 +105,19 @@ DEFAULT_DATA_QUALITY = {
     "geo": "approximate",
 }
 
+#: 各道之间的转运通道（双向各存一条）。
+#: capacity 是每月可调运上限（石），按道的规模与地理邻近程度给量级估算。
+TRADE_PAIRS: list[tuple[str, str, float]] = [
+    ("guannei", "henan", 200_000),   # 关中与中原之间的干道
+    ("guannei", "hedong", 120_000),
+    ("guannei", "longyou", 80_000),
+    ("henan", "hebei", 260_000),     # 河北粮道，安史之乱前最繁忙的一条
+    ("henan", "huainan", 150_000),
+    ("henan", "hedong", 90_000),
+    ("hebei", "hedong", 100_000),
+    ("huainan", "jiangnan", 180_000),
+]
+
 #: 全年 12 个月的农事强度之和，用于把「年产能力」换算成「月产基数」
 SEASON_SUM = sum(SEASON_FACTOR)
 
@@ -176,6 +189,20 @@ def seed(session: Session) -> World:
                 military=item["military"],
             )
         )
+
+    # 转运通道：双向各存一条，途耗按地形给个统一量级
+    for a_key, b_key, capacity in TRADE_PAIRS:
+        for src, dst in ((a_key, b_key), (b_key, a_key)):
+            session.add(
+                TradeLink(
+                    world_id=world.id,
+                    from_key=src,
+                    to_key=dst,
+                    kind="grain",
+                    capacity=capacity,
+                    loss=0.08,
+                )
+            )
 
     session.flush()
     return world

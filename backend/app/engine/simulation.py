@@ -12,7 +12,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import (
@@ -21,6 +21,7 @@ from ..models import (
     RegionState,
     SimEvent,
     Snapshot,
+    TradeLink,
 )
 from ..utils import format_date
 from . import rules
@@ -123,8 +124,37 @@ class SimulationEngine:
         pending_snapshots: list[dict] = []
         self._pending_events = pending_events
 
+        # 事件要能互相引用（因果链），所以主键由引擎自己分配。
+        # 走 Core 批量插入拿不回自增 ID，而逐条插入又会把远程往返拉回线性增长。
+        max_id = self.session.scalar(select(func.max(SimEvent.id))) or 0
+        self._next_event_id = int(max_id) + 1
+        #: 每个道上次播报粮荒的 (tick, 严重度)，用来压制逐月重复刷屏
+        self._last_famine: dict[str, tuple[int, int]] = {}
+        #: 仍在持续的粮荒事件 id，供后续调运事件挂因果
+        self._active_famine_event: dict[str, int] = {}
+        #: 该分支最近一次用户干预（歉收）事件，按地区索引，用于串起因果链
+        self._recent_shock: dict[str, int] = {}
+        recent = self.session.execute(
+            select(SimEvent.id, SimEvent.region_keys)
+            .where(
+                SimEvent.branch_id == branch.id,
+                SimEvent.kind == "user_shock",
+                SimEvent.tick_index >= max(branch.tick_index - 24, 0),
+            )
+            .order_by(SimEvent.tick_index.desc())
+        )
+        for event_id, region_keys in recent:
+            for key in region_keys or []:
+                self._recent_shock.setdefault(key, event_id)
+
+        links = list(
+            self.session.scalars(
+                select(TradeLink).where(TradeLink.world_id == branch.world_id)
+            )
+        )
+
         for step in range(months):
-            self._tick(branch, regions, factions, step, profile, report)
+            self._tick(branch, regions, factions, step, profile, report, links)
             branch.current_date = add_months(branch.current_date, 1)
             branch.tick_index += 1
             pending_snapshots.append(
@@ -161,6 +191,7 @@ class SimulationEngine:
         step: int,
         profile: tuple[int, bool, int],
         report: TickReport,
+        links: list[TradeLink],
     ) -> None:
         min_severity, allow_local, shock_rolls = profile
         tick_index = branch.tick_index
@@ -169,6 +200,10 @@ class SimulationEngine:
         rng = random.Random(f"{branch.seed}:{tick_index}:{step}")
         revenue_by_faction: dict[str, float] = {}
         famines: list[tuple[RegionState, float]] = []
+        #: 本 tick 各道的缺口与 famine 事件 id，供调运阶段使用
+        shortage_by_key: dict[str, float] = {}
+        consumption_by_key: dict[str, float] = {}
+        famine_event_id: dict[str, int] = {}
 
         for region in regions:
             multiplier = 1.0
@@ -199,6 +234,9 @@ class SimulationEngine:
             region.grain_stock = result.stock_after
             region.price_index = result.price_after
             region.unrest = result.unrest_after
+
+            shortage_by_key[region.region_key] = result.shortage
+            consumption_by_key[region.region_key] = result.consumption
 
             if region.faction_key:
                 revenue_by_faction[region.faction_key] = (
@@ -231,15 +269,31 @@ class SimulationEngine:
             if result.shortage > 0:
                 ratio = result.shortage / max(result.consumption, 1e-6)
                 famines.append((region, ratio))
-                if prev_stock > 0:
-                    # 只在「首次断粮」时播报；持续缺粮属于既有危机状态，
-                    # 由地区详情与民变事件体现，不逐月重复刷屏
-                    self._emit(
+                severity = rules.severity_from_ratio(ratio)
+                last = self._last_famine.get(region.region_key)
+                # 只在「跨过阈值」时播报：断粮当月、严重度明显升级、
+                # 或距上次播报已过半年。持续缺粮属于既有状态，不逐月刷屏。
+                quiet = (
+                    last is not None
+                    and severity <= last[1]
+                    and tick_index - last[0] < 6
+                )
+                if prev_stock > 0 and not quiet:
+                    self._last_famine[region.region_key] = (tick_index, severity)
+                    famine_causes: list[Any] = [
+                        {"rule": "step_region", "reason": "grain_stock_below_consumption"}
+                    ]
+                    shock_id = self._recent_shock.get(region.region_key)
+                    if shock_id is not None:
+                        famine_causes.append(
+                            {"event_id": shock_id, "rel": "caused_by_intervention"}
+                        )
+                    famine_id = self._emit(
                         branch,
                         report,
                         kind="famine",
                         scope="region",
-                        severity=rules.severity_from_ratio(ratio),
+                        severity=severity,
                         title=f"{region.name}出现粮荒",
                         summary=(
                             f"{region.name}本月缺粮 {result.shortage:.0f} 石，"
@@ -247,7 +301,7 @@ class SimulationEngine:
                         ),
                         region_keys=[region.region_key],
                         faction_keys=[region.faction_key] if region.faction_key else [],
-                        causes=[{"rule": "step_region", "reason": "grain_stock_below_consumption"}],
+                        causes=famine_causes,
                         metrics={
                             "shortage": round(result.shortage, 1),
                             "consumption": round(result.consumption, 1),
@@ -255,6 +309,9 @@ class SimulationEngine:
                         },
                         min_severity=min_severity,
                     )
+                    if famine_id is not None:
+                        famine_event_id[region.region_key] = famine_id
+                        self._active_famine_event[region.region_key] = famine_id
             elif prev_price < 2.0 <= result.price_after:
                 self._emit(
                     branch,
@@ -289,6 +346,19 @@ class SimulationEngine:
                     metrics={"unrest": round(result.unrest_after, 3)},
                     min_severity=min_severity,
                 )
+
+        # ---- 跨区域调运：把上面算出的缺口沿真实通道补上 ----
+        self._trade_phase(
+            branch,
+            regions,
+            factions,
+            links,
+            report,
+            shortage_by_key,
+            consumption_by_key,
+            famine_event_id,
+            min_severity,
+        )
 
         # ---- 势力财政 ----
         for key, faction in factions.items():
@@ -374,15 +444,18 @@ class SimulationEngine:
         causes: list[Any],
         metrics: dict[str, Any],
         min_severity: int,
-    ) -> None:
+    ) -> int | None:
         if severity < min_severity:
-            return
+            return None
         region_list = list(region_keys)
         faction_list = list(faction_keys)
+        event_id = self._next_event_id
+        self._next_event_id += 1
         # 先攒成待插入的行（字典），由 advance() 用 Core 批量写入，
         # 避免逐条往返远程数据库
         self._pending_events.append(
             {
+                "id": event_id,
                 "branch_id": branch.id,
                 "game_date": branch.current_date,
                 "tick_index": branch.tick_index,
@@ -400,6 +473,7 @@ class SimulationEngine:
         )
         report.events.append(
             {
+                "id": event_id,
                 "game_date": format_date(branch.current_date),
                 "scope": scope,
                 "kind": kind,
@@ -412,6 +486,170 @@ class SimulationEngine:
                 "metrics": metrics,
             }
         )
+        return event_id
+
+    # ---------------------------------------------------------------- #
+    def _trade_phase(
+        self,
+        branch: Branch,
+        regions: list[RegionState],
+        factions: dict[str, FactionState],
+        links: list[TradeLink],
+        report: TickReport,
+        shortage_by_key: dict[str, float],
+        consumption_by_key: dict[str, float],
+        famine_event_id: dict[str, int],
+        min_severity: int,
+    ) -> None:
+        """沿真实存在的转运通道，把余粮调到缺粮的道。
+
+        这一步是「跨区域因果传导」的引擎实现：河北歉收 → 向河南买粮 →
+        河南存粮下降、粮价上抬。链条靠事件 id 串起来，而不是靠 AI 事后叙述。
+        """
+        if not links:
+            return
+
+        by_key = {r.region_key: r for r in regions}
+        incoming: dict[str, list[TradeLink]] = {}
+        for link in links:
+            incoming.setdefault(link.to_key, []).append(link)
+        # 通道容量大的先走（相当于优先使用干道）
+        for bucket in incoming.values():
+            bucket.sort(key=lambda l: l.capacity, reverse=True)
+
+        deficits = [
+            (key, amount)
+            for key, amount in shortage_by_key.items()
+            if amount > 1.0 and key in by_key
+        ]
+        # 缺口大的先补给
+        deficits.sort(key=lambda item: item[1], reverse=True)
+
+        for key, need in deficits:
+            importer = by_key[key]
+            consumption = consumption_by_key.get(key, 0.0) or 1.0
+            remaining = need
+            covered = 0.0
+            flows: list[dict[str, Any]] = []
+
+            for link in incoming.get(key, []):
+                if remaining <= 1.0:
+                    break
+                exporter = by_key.get(link.from_key)
+                if exporter is None or exporter is importer:
+                    continue
+                exporter_consumption = consumption_by_key.get(link.from_key, 0.0) or 1.0
+                surplus = rules.exportable_surplus(
+                    exporter.grain_stock, exporter_consumption
+                )
+                if surplus <= 1.0:
+                    continue
+
+                amount = min(remaining, surplus, link.capacity)
+                if amount <= 1.0:
+                    continue
+                delivered = rules.delivered_amount(amount, link.loss)
+
+                exporter.grain_stock = max(exporter.grain_stock - amount, 0.0)
+                importer.grain_stock += delivered
+                remaining -= delivered
+                covered += delivered
+
+                # 价格：进口方回落，出口方上抬
+                importer.price_index = rules.price_after_import(
+                    importer.price_index, importer.grain_stock, consumption
+                )
+                exporter.price_index = rules.price_after_export(
+                    exporter.price_index, exporter.grain_stock, exporter_consumption
+                )
+
+                # 货款在两方势力之间转移（跨势力调运要花钱）
+                price = importer.price_index
+                value = delivered * price
+                self._settle_payment(factions, importer.faction_key, exporter.faction_key, value)
+
+                cause_list: list[Any] = [
+                    {"rule": "trade_transfer", "link": f"{link.from_key}->{link.to_key}"}
+                ]
+                famine_ref = famine_event_id.get(key) or self._active_famine_event.get(key)
+                if famine_ref is not None:
+                    cause_list.append({"event_id": famine_ref, "rel": "caused_by_famine"})
+
+                flow_id = self._emit(
+                    branch,
+                    report,
+                    kind="grain_flow",
+                    scope="region",
+                    severity=rules.severity_from_ratio(delivered / max(need, 1.0)),
+                    title=f"{by_key[link.from_key].name}调粮至{importer.name}",
+                    summary=(
+                        f"{by_key[link.from_key].name}本月向{importer.name}调运粮食 "
+                        f"{amount:.0f} 石，途耗后到位 {delivered:.0f} 石；"
+                        f"{importer.name}粮价指数回到 {importer.price_index:.2f}。"
+                    ),
+                    region_keys=[link.from_key, key],
+                    faction_keys=[
+                        k
+                        for k in (importer.faction_key, exporter.faction_key)
+                        if k
+                    ],
+                    causes=cause_list,
+                    metrics={
+                        "amount": round(amount, 1),
+                        "delivered": round(delivered, 1),
+                        "loss": link.loss,
+                        "importer_price": round(importer.price_index, 3),
+                        "exporter_price": round(exporter.price_index, 3),
+                    },
+                    min_severity=min_severity,
+                )
+                flows.append({"from": link.from_key, "to": key, "delivered": delivered, "event_id": flow_id})
+
+                # 出口方如果被拉到紧张区间，产生"粮价外溢"事件，挂在调运事件下面
+                if exporter.price_index >= 1.6 and flow_id is not None:
+                    self._emit(
+                        branch,
+                        report,
+                        kind="price_pressure",
+                        scope="region",
+                        severity=rules.severity_from_ratio(exporter.price_index / 3.0),
+                        title=f"{exporter.name}粮价被推高",
+                        summary=(
+                            f"因向{importer.name}调粮，{exporter.name}存粮降至"
+                            f"{exporter.grain_stock:.0f} 石，粮价指数升至 {exporter.price_index:.2f}。"
+                        ),
+                        region_keys=[link.from_key],
+                        faction_keys=[exporter.faction_key] if exporter.faction_key else [],
+                        causes=[
+                            {"event_id": flow_id, "rel": "caused_by_transfer"},
+                        ],
+                        metrics={
+                            "price_index": round(exporter.price_index, 3),
+                            "grain_stock": round(exporter.grain_stock, 1),
+                        },
+                        min_severity=1,
+                    )
+
+            if covered > 0:
+                importer.unrest = max(importer.unrest - 0.05 * (covered / consumption), 0.0)
+
+    # ---------------------------------------------------------------- #
+    @staticmethod
+    def _settle_payment(
+        factions: dict[str, FactionState],
+        buyer_key: str | None,
+        seller_key: str | None,
+        value: float,
+    ) -> None:
+        """跨势力调运要付钱：买方扣、卖方收；同势力内部调拨只记支出。"""
+        if value <= 0:
+            return
+        buyer = factions.get(buyer_key) if buyer_key else None
+        seller = factions.get(seller_key) if seller_key else None
+        if buyer is not None:
+            buyer.treasury -= value
+        if seller is not None and seller is not buyer:
+            seller.treasury += value
 
     # ---------------------------------------------------------------- #
     def _make_snapshot(

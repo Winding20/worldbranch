@@ -1,4 +1,4 @@
-﻿"""领域模型。
+"""领域模型。
 
 设计要点（对应设计文档）：
 - ``World`` 是「世界模板」：地区、势力、初始数据、规则参数。
@@ -60,6 +60,9 @@ class World(Base):
         back_populates="world", cascade="all, delete-orphan"
     )
     factions: Mapped[list["Faction"]] = relationship(
+        back_populates="world", cascade="all, delete-orphan"
+    )
+    trade_links: Mapped[list["TradeLink"]] = relationship(
         back_populates="world", cascade="all, delete-orphan"
     )
 
@@ -130,6 +133,32 @@ class Faction(Base):
     military: Mapped[float] = mapped_column(Float, default=0.0)
 
     world: Mapped[World] = relationship(back_populates="factions")
+
+
+class TradeLink(Base):
+    """两个地区之间的转运通道（粮食等物资流动的载体）。
+
+    「一地道歉收会影响到邻道」这件事，必须先有一条真实存在的通道，
+    否则 AI 讲出来的连锁反应就没有数据支撑。设计文档要求影响必须
+    由规则和数据支持，不能仅凭叙述认定因果。
+    """
+
+    __tablename__ = "trade_links"
+    __table_args__ = (
+        UniqueConstraint("world_id", "from_key", "to_key", name="uq_tradelink_world_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id", ondelete="CASCADE"))
+    from_key: Mapped[str] = mapped_column(String(64), index=True)
+    to_key: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="grain")
+    #: 每月最多可调运的粮量（石）
+    capacity: Mapped[float] = mapped_column(Float, default=0.0)
+    #: 途耗比例
+    loss: Mapped[float] = mapped_column(Float, default=0.08)
+
+    world: Mapped[World] = relationship(back_populates="trade_links")
 
 
 # --------------------------------------------------------------------------- #
