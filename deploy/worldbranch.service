@@ -1,0 +1,34 @@
+[Unit]
+Description=WorldBranch 唐史推演器
+After=network.target
+# 若数据库在同一个服务上，把 mysql.service 也列进来
+# After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/worldbranch/backend
+Environment="FLASK_APP=run.py"
+Environment="HOST=127.0.0.1"
+Environment="PORT=5210"
+Environment="THREADS=8"
+# 调试必须关闭：开着会打印 SQL 并暴露调试器
+Environment="WORLDBRANCH_DEBUG=0"
+
+ExecStart=/www/wwwroot/worldbranch/.venv/bin/python serve.py
+Restart=always
+RestartSec=3
+# 让 Python 的输出直接进 journal，不要缓冲
+Environment="PYTHONUNBUFFERED=1"
+StandardOutput=journal
+StandardError=journal
+
+# 基本加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/www/wwwroot/worldbranch
+
+[Install]
+WantedBy=multi-user.target
