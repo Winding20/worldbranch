@@ -3,18 +3,10 @@
 用纯代码逐帧渲染 + numpy 合成配乐 + FFmpeg 编码，产出 `dist-promo/worldbranch-promo.mp4`
 （1920×1080 / 30fps / 31s / H.264 + AAC）。
 
-创作规范来自 [code-video-showcase](https://github.com/Moessif/code-video-showcase) 技能。
-该技能已装在**用户级**目录，所有项目都能用：
+创作规范参考 [code-video-showcase](https://github.com/Moessif/code-video-showcase)（MIT）：
+绯墨剧场主题、120 BPM 卡点、大字卡 + 风格段交替的结构、确定性渲染。
 
-```
-C:\Users\1\.dsh\skills\code-video-showcase\
-```
-
-（DSH 的技能扫描顺序：`<项目>/.dsh/skills` → `<项目>/.agents/skills` →
-自定义目录 → `<DSH_HOME>/skills` → `~/.agents/skills`）
-
-采用它的：绯墨剧场主题、120 BPM 卡点、大字卡 + 风格段交替的结构、
-确定性渲染（同一 t 必出同一帧）。
+本项目**不包含**该技能的代码，也不依赖它运行——`build_promo.py` 是独立实现。
 
 ## 生成
 
