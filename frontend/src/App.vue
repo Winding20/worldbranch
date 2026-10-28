@@ -292,7 +292,7 @@ onMounted(boot);
       <span class="brand-mark">WB</span>
       <div>
         <h1>WorldBranch</h1>
-        <p>平行世界推演实验室</p>
+        <p>安史之乱模拟器</p>
       </div>
     </div>
     <div v-if="branch" class="branch-meta">

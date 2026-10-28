@@ -2244,7 +2244,7 @@ return (_ctx, _cache) => {
         lf("span", { class: "brand-mark" }, "WB"),
         lf("div", null, [
           lf("h1", null, "WorldBranch"),
-          lf("p", null, "平行世界推演实验室")
+          lf("p", null, "安史之乱模拟器")
         ])
       ], -1)),
       (branch.value)

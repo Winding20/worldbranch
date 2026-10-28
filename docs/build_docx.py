@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Generate WorldBranch project design DOCX from the markdown source."""
 import re
 import sys
@@ -159,7 +159,7 @@ def build():
     set_run_font(r, size=Pt(36), bold=True, color=ACCENT)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("平行世界推演实验室")
+    r = p.add_run("安史之乱模拟器")
     set_run_font(r, size=Pt(22), bold=True, color=ACCENT)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -298,7 +298,7 @@ def build():
         i += 1
 
     doc.core_properties.title = "WorldBranch 项目总设计文档"
-    doc.core_properties.subject = "平行世界推演实验室"
+    doc.core_properties.subject = "安史之乱模拟器"
     doc.save(OUT)
     print(f"saved: {OUT}")
 

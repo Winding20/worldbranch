@@ -202,7 +202,7 @@ def main() -> int:
     args = parser.parse_args()
 
     say("=" * 56)
-    say(" WorldBranch · 唐史推演器")
+    say(" WorldBranch · 安史之乱模拟器")
     say("=" * 56)
 
     # 已有可用虚拟环境时，启动器是几版并不重要
