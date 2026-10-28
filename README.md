@@ -147,6 +147,30 @@ node smoke.mjs     # 用 jsdom 真实挂载并断言渲染结果
 
 ## 快速开始
 
+### 只需要一步
+
+- **Windows**：双击 `start.bat`
+- **Linux / macOS**：`./start.sh`
+
+脚本会自己完成：找合适的 Python（3.10+）→ 建虚拟环境 → 装依赖 →
+建库并播种 → 挑一个空闲端口 → 起服务 → 打开浏览器。
+
+**不需要装数据库**：数据默认存在 `backend/instance/worldbranch.db`
+（Python 自带的 SQLite）。首次运行约十几秒，之后几秒即开。
+
+> 需要 Python 3.10 或更高。装 Python 时记得勾选 “Add Python to PATH”。
+
+### 分发给别人
+
+```powershell
+python tools\package.py --oneclick    # 打包并验证解压后能一键启动
+```
+
+产物在 `dist-package/worldbranch-<日期>.tar.gz`（约 0.5 MB），
+使用者解压后双击 `start.bat` 即可，不含 Node、不含数据库、不需要联网装服务。
+
+### 开发者方式
+
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 . .\tools\dev-env.ps1
@@ -155,7 +179,7 @@ cd backend
 $env:FLASK_APP = "run.py"
 python -m flask init-db
 python -m flask seed
-python run.py
+python run.py            # 开发模式：热重载
 ```
 
 然后打开 <http://127.0.0.1:5210/>，页面直接进入安史之乱切片。

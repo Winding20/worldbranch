@@ -199,13 +199,86 @@ def verify(tar_path: Path, port: int = 5320) -> int:
     return 0
 
 
+def verify_oneclick(tar_path: Path, port: int = 5330) -> int:
+    """解包后直接跑包里的 tools/bootstrap.py，验证「下载解压就能用」。
+
+    用 --python 指向已有环境，避免在验证时又去联网装一遍依赖；
+    开库、建表、播种、起服务、等健康检查这些真实路径全都走一遍。
+    """
+    target = ROOT / ".tmp" / "oneclick"
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    with tarfile.open(tar_path) as tar:
+        tar.extractall(target)
+    roots = [p for p in target.iterdir() if p.is_dir()]
+    if not roots:
+        print("✗ 解包后没有目录")
+        return 1
+    pkg = roots[0]
+    print(f"解包到 {pkg}")
+
+    py = _verify_python()
+    print(f"    用一键脚本启动（解释器 {py}）")
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    log = target / "oneclick.log"
+    proc = subprocess.Popen(
+        [
+            py,
+            str(pkg / "tools" / "bootstrap.py"),
+            "--no-browser",
+            "--port",
+            str(port),
+            "--python",
+            py,
+        ],
+        cwd=pkg,
+        env=env,
+        stdout=log.open("wb"),
+        stderr=subprocess.STDOUT,
+    )
+    try:
+        url = f"http://127.0.0.1:{port}"
+        if not wait_health(f"{url}/api/health"):
+            print(log.read_text(encoding="utf-8", errors="replace")[-2000:])
+            print("✗ 一键脚本没能把服务带起来")
+            return 1
+        print("    一键脚本已把服务带起来，跑部署自检")
+        code = subprocess.run(
+            [py, str(ROOT / "tools" / "deploy_check.py"), url], cwd=ROOT, env=env
+        ).returncode
+        if code != 0:
+            print("✗ 部署自检未通过")
+            return 1
+    finally:
+        # bootstrap 会拉起 serve.py 子进程，这里按端口兜底清理
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    print("✓ 解压后一键启动可用")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--verify", action="store_true", help="打包后在干净目录实跑一遍")
+    parser.add_argument(
+        "--oneclick",
+        action="store_true",
+        help="用包里自带的一键脚本启动（最接近使用者的真实路径）",
+    )
     parser.add_argument("--port", type=int, default=5320)
     args = parser.parse_args()
 
     tar_path = build()
+    if args.oneclick:
+        print("\n==> 用发布包里的一键脚本启动")
+        return verify_oneclick(tar_path, args.port)
     if args.verify:
         print("\n==> 在干净目录验证发布包")
         return verify(tar_path, args.port)

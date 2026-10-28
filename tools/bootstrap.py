@@ -194,6 +194,11 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--reset", action="store_true", help="删除本地数据库后重建")
+    parser.add_argument(
+        "--python",
+        default="",
+        help="指定已有的 Python 环境（跳过建虚拟环境与装依赖），主要用于自动化验证",
+    )
     args = parser.parse_args()
 
     say("=" * 56)
@@ -208,9 +213,16 @@ def main() -> int:
         say("· 按要求清空本地数据库")
         reset_db()
 
-    py = ensure_venv()
-    if py is None:
-        return 1
+    if args.python:
+        py = Path(args.python)
+        if not py.exists():
+            say(f"✗ 指定的解释器不存在：{py}")
+            return 1
+        say(f"· 使用指定环境：{py}")
+    else:
+        py = ensure_venv()
+        if py is None:
+            return 1
 
     if not ensure_data(py):
         return 1

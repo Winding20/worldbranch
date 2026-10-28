@@ -201,7 +201,7 @@ def main() -> int:
         [
             sys.executable,
             "tools/package.py",
-            "--verify",
+            "--oneclick",
             "--port",
             str(args.port + 2),
         ],
