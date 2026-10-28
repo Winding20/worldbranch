@@ -87,6 +87,7 @@ const checks = {
   "底部动作条有推进": /1 年/.test(body),
   "有进度条": Boolean(window.document.querySelector(".progress-track")),
   "有抽屉开关": Boolean(window.document.querySelector(".drawer-toggle")),
+  "有音效开关": Boolean(window.document.querySelector(".sound-toggle")),
   "无运行时错误": errors.length === 0,
 };
 
@@ -95,6 +96,28 @@ for (const [name, ok] of Object.entries(checks)) {
   console.log(`${ok ? "✓" : "✗"} ${name}`);
   if (!ok) failed += 1;
 }
+// ---- 音效：开关状态可读可切，且不报错 ----
+console.log("\n【音效】");
+const muteBtn = window.document.querySelector(".sound-toggle");
+const muteChecks = {
+  "音效开关存在": Boolean(muteBtn),
+  "默认是开启状态": /音效/.test(muteBtn?.textContent || ""),
+};
+if (muteBtn) {
+  muteBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(250);
+  muteChecks["点击后变静音"] = /静音/.test(muteBtn.textContent || "");
+  muteChecks["静音写入本地存储"] = window.localStorage.getItem("wb:muted") === "1";
+  muteBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await wait(250);
+  muteChecks["再次点击恢复"] = /音效/.test(muteBtn.textContent || "");
+  muteChecks["恢复后本地存储为 0"] = window.localStorage.getItem("wb:muted") === "0";
+}
+for (const [n, ok] of Object.entries(muteChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
+
 if (errors.length) {
   console.log("\n捕获到的错误：");
   errors.slice(0, 5).forEach((e) => console.log("  -", e));

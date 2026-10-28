@@ -655,3 +655,92 @@ select {
   0%, 100% { stroke-opacity: 0.55; }
   50% { stroke-opacity: 1; }
 }
+/* ============================ 音效开关 ============================ */
+.sound-toggle {
+  padding: 9px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(29, 38, 47, 0.9);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.sound-toggle.off { color: var(--muted); border-style: dashed; }
+
+/* ============================ 动效 ============================ */
+/* 统一的缓动：先快后慢，像东西被轻轻放下 */
+:root {
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* 按钮：按下有实感，松开回弹 */
+button {
+  transition: transform 0.12s var(--ease-out), background-color 0.18s ease,
+    border-color 0.18s ease, color 0.18s ease;
+}
+button:active:not(:disabled) { transform: scale(0.96); }
+
+/* 浮层：遮罩淡入，奏疏从下方托上来 */
+.decision-overlay {
+  animation: veil-in 0.22s var(--ease-soft);
+}
+@keyframes veil-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.decision-sheet {
+  animation: sheet-in 0.28s var(--ease-soft);
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 选项：悬停轻轻抬起，选中时描边亮起 */
+.decision-sheet .d-option {
+  transition: transform 0.16s var(--ease-out), border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+.decision-sheet .d-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-2);
+}
+
+/* 抽屉滑入时附带一点淡入 */
+.side-panel { transition: transform 0.28s var(--ease-soft), opacity 0.2s ease; }
+
+/* 面板内容切换：轻微的错位淡入，而不是硬切 */
+.panel-block {
+  animation: block-in 0.24s var(--ease-soft);
+}
+@keyframes block-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* HUD 数字变化时轻微跳动 */
+.hud-stats b {
+  display: inline-block;
+  animation: num-in 0.3s var(--ease-soft);
+}
+@keyframes num-in {
+  from { transform: translateY(-3px); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+
+/* 地区被选中：描边稍微亮一下再稳定 */
+.spotlight-ring { transform-origin: center; }
+
+/* 尊重系统「减少动态效果」：全部关掉，但保留状态变化 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

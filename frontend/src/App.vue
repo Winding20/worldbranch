@@ -7,6 +7,7 @@ import RegionDetail from "./components/RegionDetail.vue";
 import BranchCompare from "./components/BranchCompare.vue";
 import AiPanel from "./components/AiPanel.vue";
 import DecisionPanel from "./components/DecisionPanel.vue";
+import { isMuted, toggleMuted } from "./sound.js";
 import EndingCard from "./components/EndingCard.vue";
 
 const WORLD = "tang_755";
@@ -42,6 +43,11 @@ const loyalty = ref([]);
 const historyStatus = ref({ fired: [], diverged: [] });
 //: 右侧分组：决断 / 军事 / 人物 / 史实
 const panel = ref("decide");
+//: 音效开关（状态存在 localStorage，刷新后保持）
+const muted = ref(isMuted());
+function toggleSound() {
+  muted.value = toggleMuted();
+}
 //: 侧栏抽屉（窄屏默认收起，宽屏默认展开）
 const drawerOpen = ref(typeof window !== "undefined" && window.innerWidth >= 1024);
 //: 决策浮层被"稍后再议"收起的标记
@@ -551,6 +557,14 @@ onMounted(boot);
         <button class="advance" :disabled="busy" @click="advance(1)">1 月</button>
         <button class="advance" :disabled="busy" @click="advance(3)">3 月</button>
         <button class="advance primary" :disabled="busy" @click="advance(12)">1 年</button>
+        <button
+          class="sound-toggle"
+          :class="{ off: muted }"
+          :title="muted ? '开启音效' : '关闭音效'"
+          @click="toggleSound"
+        >
+          {{ muted ? "静音" : "音效" }}
+        </button>
         <button class="drawer-toggle" @click="drawerOpen = !drawerOpen">
           {{ drawerOpen ? "收起" : "朝局" }}
           <span v-if="decisions.length" class="count urgent">{{ decisions.length }}</span>
