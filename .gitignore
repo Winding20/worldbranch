@@ -45,3 +45,5 @@ desktop.ini
 # 打包产物
 dist-package/
 backend/.env.mysql.bak
+# 本地数据库（SQLite）与上传物
+backend/instance/
