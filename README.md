@@ -367,20 +367,28 @@ A: 750-08-01  B: 750-08-01
 | GET | `/api/branches/<id>/history` | 史实应验与改道 |
 | GET | `/api/branches/<id>/ending` | 结局评估（未到时限返回 204） |
 
-## 测试
+## 测试与 CI
+
+一条命令跑完全部检查（后端测试、史料数据校验、建库播种、前端构建、渲染冒烟）：
 
 ```powershell
-cd backend
-python -m pytest          # 166 个后端测试
-cd ../frontend
-node smoke.mjs            # 36 项渲染断言（需要后端在 5210 端口跑着）
+python tools\ci.py
+python tools\ci.py --skip-frontend   # 只跑后端
+python tools\ci.py --port 5300       # 换端口（默认 5300，不占用开发用的 5210）
 ```
 
-数据完整性另有两个脚本，改动史实表后建议先跑：
+CI 用**独立的 SQLite 文件**（`.tmp/ci.db`），不会碰开发库或远程 MySQL；
+起一个临时服务跑完冒烟后会自己关掉。
+
+同样这套检查会在推送时由 GitHub Actions 执行（`.github/workflows/ci.yml`）。
+
+单独跑某一项：
 
 ```powershell
-python tools\check_tang_data.py   # 事件 key / 条件 / 效果引用的存在性
-python tools\diagnose_history.py  # 逐条打印史实判定结果
+cd backend && python -m pytest           # 后端测试
+cd frontend && node smoke.mjs <url>      # 渲染冒烟（需要服务在跑）
+python tools\check_tang_data.py          # 史料数据完整性
+python tools\diagnose_history.py         # 逐条打印史实判定结果
 ```
 
 ## 设计约束（来自项目总设计文档）

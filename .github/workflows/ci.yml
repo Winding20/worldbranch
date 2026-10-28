@@ -1,0 +1,41 @@
+name: CI
+
+# 与本地 `python tools/ci.py` 完全同一套检查，避免两套脚本走偏。
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 安装后端依赖
+        run: pip install -r backend/requirements.txt
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        # 本仓库的构建脚本不依赖任何原生模块，跳过 install 脚本更稳
+        run: npm install --ignore-scripts
+
+      - name: 运行检查（测试 / 数据校验 / 建库播种 / 构建 / 渲染冒烟）
+        run: python tools/ci.py
+
+      - name: 失败时输出服务端日志
+        if: failure()
+        run: cat .tmp/ci-server.log 2>/dev/null || true
