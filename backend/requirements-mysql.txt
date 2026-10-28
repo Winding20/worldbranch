@@ -1,0 +1,4 @@
+﻿# 可选：只有要把数据库换成 MySQL 时才需要
+#   pip install -r requirements-mysql.txt
+# 然后把 WORLDBRANCH_DATABASE_URL 指向 MySQL 即可，代码无需改动。
+PyMySQL>=1.1

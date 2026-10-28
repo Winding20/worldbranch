@@ -1,4 +1,4 @@
-# --- Python ---
+﻿# --- Python ---
 __pycache__/
 *.py[cod]
 *.so
@@ -42,3 +42,6 @@ Thumbs.db
 desktop.ini
 ~$*
 *.tmp
+# 打包产物
+dist-package/
+backend/.env.mysql.bak

@@ -1,0 +1,216 @@
+﻿"""打包可部署的发布产物，并可选地在干净目录里验证它能跑起来。
+
+    python tools/package.py              # 只打包
+    python tools/package.py --verify     # 打包 + 解到 .tmp/pkgcheck 实跑一遍
+
+产物：dist-package/worldbranch-<日期>.tar.gz
+包含：backend（源码与前端产物挂载点）、frontend/dist、deploy、requirements，
+      不含 instance、.env、__pycache__、测试缓存。
+
+验证做的事：
+  解包 → 建独立 SQLite → init-db + seed → serve.py 起服务 → deploy_check → 收工
+这一步能证明"打出来的包是自包含的"，但**不能**代替真正部署到服务器。
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT_DIR = ROOT / "dist-package"
+CHECK_DIR = ROOT / ".tmp" / "pkgcheck"
+
+#: 不打进包里的东西
+EXCLUDE_DIRS = {
+    "__pycache__",
+    ".pytest_cache",
+    "instance",
+    "node_modules",
+    ".tmp",
+    "dist-package",
+    "dist-smoke",
+}
+EXCLUDE_SUFFIX = {".pyc", ".pyo", ".log"}
+EXCLUDE_FILES = {".env"}
+
+
+def copy_tree(src: Path, dst: Path) -> None:
+    for item in src.rglob("*"):
+        rel = item.relative_to(src)
+        if any(part in EXCLUDE_DIRS for part in rel.parts):
+            continue
+        if item.is_dir():
+            continue
+        if item.name in EXCLUDE_FILES or item.suffix in EXCLUDE_SUFFIX:
+            continue
+        target = dst / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, target)
+
+
+def build() -> Path:
+    stamp = dt.date.today().isoformat()
+    stage = OUT_DIR / f"worldbranch-{stamp}"
+    if stage.exists():
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+
+    copy_tree(ROOT / "backend", stage / "backend")
+    # 前端只带产物：使用者不需要装 Node
+    shutil.copytree(ROOT / "frontend" / "dist", stage / "frontend" / "dist")
+    copy_tree(ROOT / "deploy", stage / "deploy")
+    # 一键启动需要的东西
+    copy_tree(ROOT / "tools", stage / "tools")
+    for name in ("start.bat", "start.sh"):
+        src = ROOT / name
+        if src.exists():
+            shutil.copy2(src, stage / name)
+
+    (stage / "README-部署.txt").write_text(
+        "WorldBranch 发布包\n"
+        "==================\n\n"
+        "【最简单的方式】\n"
+        "  Windows：双击 start.bat\n"
+        "  Linux/macOS：./start.sh\n"
+        "  脚本会自动建虚拟环境、装依赖、建库、播种、起服务并打开浏览器。\n"
+        "  数据存在 backend/instance/worldbranch.db（SQLite），不需要装数据库。\n\n"
+        "【手动部署到服务器】\n"
+        "1. 建虚拟环境并装依赖：\n"
+        "   python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt\n\n"
+        "2. 配置数据库（backend/.env）：\n"
+        "   WORLDBRANCH_DATABASE_URL=mysql+pymysql://用户:密码@127.0.0.1:3306/库?charset=utf8mb4\n\n"
+        "3. 建表与播种：\n"
+        "   cd backend && FLASK_APP=run.py ../.venv/bin/python -m flask init-db\n"
+        "   cd backend && FLASK_APP=run.py ../.venv/bin/python -m flask seed\n\n"
+        "4. 起服务：\n"
+        "   cd backend && HOST=127.0.0.1 PORT=5210 python serve.py\n\n"
+        "5. 自检：\n"
+        "   python tools/deploy_check.py http://127.0.0.1:5210\n\n"
+        "详细说明见 deploy/ 与 docs/部署说明.md。\n",
+        encoding="utf-8",
+    )
+
+    tar_path = OUT_DIR / f"worldbranch-{stamp}.tar.gz"
+    if tar_path.exists():
+        tar_path.unlink()
+    with tarfile.open(tar_path, "w:gz") as tar:
+        tar.add(stage, arcname=stage.name)
+
+    size_mb = tar_path.stat().st_size / 1024 / 1024
+    files = sum(1 for _ in stage.rglob("*") if _.is_file())
+    print(f"已打包 {tar_path}（{size_mb:.1f} MB，{files} 个文件）")
+    return tar_path
+
+
+def wait_health(url: str, timeout: float = 40.0) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as resp:
+                if resp.status == 200:
+                    return True
+        except (urllib.error.URLError, OSError):
+            time.sleep(0.5)
+    return False
+
+
+def _verify_python() -> str:
+    """验证时用项目虚拟环境（如果存在）：它才是使用者实际会用的解释器。"""
+    for rel in ("Scripts/python.exe", "bin/python"):
+        candidate = ROOT / ".venv" / rel
+        if candidate.exists():
+            return str(candidate)
+    return sys.executable
+
+
+def verify(tar_path: Path, port: int = 5320) -> int:
+    if CHECK_DIR.exists():
+        shutil.rmtree(CHECK_DIR)
+    CHECK_DIR.mkdir(parents=True)
+
+    with tarfile.open(tar_path) as tar:
+        tar.extractall(CHECK_DIR)
+    roots = [p for p in CHECK_DIR.iterdir() if p.is_dir()]
+    if not roots:
+        print("✗ 解包后没有目录")
+        return 1
+    pkg = roots[0]
+    print(f"解包到 {pkg}")
+
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["WORLDBRANCH_DATABASE_URL"] = f"sqlite:///{(CHECK_DIR / 'pkg.db').as_posix()}"
+    env["FLASK_APP"] = "run.py"
+    env["HOST"] = "127.0.0.1"
+    env["PORT"] = str(port)
+    env["THREADS"] = "4"
+
+    backend = pkg / "backend"
+    py = _verify_python()
+    print(f"    使用解释器：{py}")
+    for cmd in (["-m", "flask", "init-db"], ["-m", "flask", "seed"]):
+        print(f"    $ {' '.join(cmd)}")
+        if subprocess.run([py, *cmd], cwd=backend, env=env).returncode != 0:
+            print(f"✗ {cmd[-1]} 失败")
+            return 1
+
+    log = CHECK_DIR / "serve.log"
+    proc = subprocess.Popen(
+        [py, "serve.py"],
+        cwd=backend,
+        env=env,
+        stdout=log.open("wb"),
+        stderr=subprocess.STDOUT,
+    )
+    try:
+        url = f"http://127.0.0.1:{port}"
+        if not wait_health(f"{url}/api/health"):
+            print(log.read_text(encoding="utf-8", errors="replace")[-1500:])
+            print("✗ 发布包里的服务没起来")
+            return 1
+        print("    服务已就绪，跑部署自检")
+        code = subprocess.run(
+            [py, str(ROOT / "tools" / "deploy_check.py"), url],
+            cwd=ROOT,
+            env=env,
+        ).returncode
+        if code != 0:
+            print("✗ 部署自检未通过")
+            return 1
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    print("✓ 发布包自包含，可独立运行")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verify", action="store_true", help="打包后在干净目录实跑一遍")
+    parser.add_argument("--port", type=int, default=5320)
+    args = parser.parse_args()
+
+    tar_path = build()
+    if args.verify:
+        print("\n==> 在干净目录验证发布包")
+        return verify(tar_path, args.port)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

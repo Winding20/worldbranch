@@ -194,6 +194,23 @@ def main() -> int:
     finally:
         stop(prod)
 
+    # ---------- 7. 发布包 ----------
+    # 打出来的包必须能在干净目录里独立跑起来，否则"能部署"只是嘴上说说。
+    say("发布包自检")
+    code = run(
+        [
+            sys.executable,
+            "tools/package.py",
+            "--verify",
+            "--port",
+            str(args.port + 2),
+        ],
+        ROOT,
+        env,
+    )
+    if code != 0:
+        return fail("发布包自检")
+
     print("\n✓ 全部通过", flush=True)
     return 0
 
