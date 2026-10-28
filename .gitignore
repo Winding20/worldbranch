@@ -54,3 +54,5 @@ desktop.ini
 *.tmp
 # 宣传片产物（体积大，不进仓库）
 dist-promo/
+# 项目级技能目录（技能装在用户级 ~/.dsh/skills）
+.dsh/
