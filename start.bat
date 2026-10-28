@@ -1,35 +1,33 @@
 @echo off
-chcp 65001 >nul
+rem WorldBranch launcher. Keep this file ASCII-only and CRLF:
+rem cmd.exe misparses UTF-8 text and LF-only line endings.
 setlocal
-
 cd /d "%~dp0"
 
-echo.
-echo   WorldBranch - 唐史推演器
-echo   ----------------------------------------
-echo.
-
 where python >nul 2>nul
-if errorlevel 1 (
-  where py >nul 2>nul
-  if errorlevel 1 (
-    echo   [错误] 没找到 Python。
-    echo.
-    echo   请先安装 Python 3.10 或更高版本：
-    echo     https://www.python.org/downloads/
-    echo   安装时请勾选 "Add Python to PATH"。
-    echo.
-    pause
-    exit /b 1
-  )
-  py -3 tools\bootstrap.py %*
-) else (
+if not errorlevel 1 (
   python tools\bootstrap.py %*
+  goto done
 )
 
+where py >nul 2>nul
+if not errorlevel 1 (
+  py -3 tools\bootstrap.py %*
+  goto done
+)
+
+echo.
+echo   Python not found.
+echo   Install Python 3.10+ from https://www.python.org/downloads/
+echo   and tick "Add Python to PATH", then run this file again.
+echo.
+pause
+exit /b 1
+
+:done
 if errorlevel 1 (
   echo.
-  echo   启动失败，请把上面的信息截图反馈。
+  echo   Startup failed. Please send the message above.
   pause
 )
 endlocal

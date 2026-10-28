@@ -248,12 +248,14 @@ def main() -> int:
             say("✗ 服务没能在 60 秒内就绪")
             return 1
         say("")
-        say("  ✓ 已就绪，正在打开浏览器")
+        say("  ✓ 服务已就绪")
         say(f"    地址：{url}")
-        say("    关闭这个窗口即停止服务")
-        say("")
         if not args.no_browser:
+            say("    已打开浏览器；关闭这个窗口即停止服务")
             webbrowser.open(url)
+        else:
+            say("    按 Ctrl+C 停止服务")
+        say("")
         proc.wait()
     except KeyboardInterrupt:
         say("\n· 正在停止…")

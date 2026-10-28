@@ -108,13 +108,19 @@ def main() -> int:
     if code != 0:
         return fail("后端测试")
 
-    # ---------- 2. 史料数据完整性 ----------
+    # ---------- 2. 启动脚本 ----------
+    say("启动脚本检查")
+    code = run([sys.executable, "tools/check_launcher.py"], ROOT, env)
+    if code != 0:
+        return fail("启动脚本检查")
+
+    # ---------- 3. 史料数据完整性 ----------
     say("史料数据完整性")
     code = run([sys.executable, "tools/check_tang_data.py"], ROOT, env)
     if code != 0:
         return fail("数据校验")
 
-    # ---------- 3. 建库 + 播种 ----------
+    # ---------- 4. 建库 + 播种 ----------
     say("建库与播种")
     for cmd in (["-m", "flask", "init-db"], ["-m", "flask", "seed"]):
         code = run([sys.executable, *cmd], BACKEND, env)
@@ -126,13 +132,13 @@ def main() -> int:
         print("\n✓ 后端部分通过", flush=True)
         return 0
 
-    # ---------- 4. 前端构建 ----------
+    # ---------- 5. 前端构建 ----------
     say("前端构建")
     code = run([node_bin(), "build.mjs"], FRONTEND, env)
     if code != 0:
         return fail("前端构建")
 
-    # ---------- 5. 起服务 + 渲染冒烟 ----------
+    # ---------- 6. 起服务 + 渲染冒烟 ----------
     say(f"启动服务（端口 {args.port}）")
     log = TMP / "ci-server.log"
     server = subprocess.Popen(
@@ -161,7 +167,7 @@ def main() -> int:
     finally:
         stop(server)
 
-    # ---------- 6. 生产入口 ----------
+    # ---------- 7. 生产入口 ----------
     # 部署用的是 serve.py（waitress），这里把同一条路径也跑一遍，
     # 免得"开发能跑、上生产就崩"。
     say("生产入口 serve.py")
@@ -194,7 +200,7 @@ def main() -> int:
     finally:
         stop(prod)
 
-    # ---------- 7. 发布包 ----------
+    # ---------- 8. 发布包 ----------
     # 打出来的包必须能在干净目录里独立跑起来，否则"能部署"只是嘴上说说。
     say("发布包自检")
     code = run(
