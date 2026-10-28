@@ -56,3 +56,5 @@ desktop.ini
 dist-promo/
 # 项目级技能目录（技能装在用户级 ~/.dsh/skills）
 .dsh/
+# 上传用的打包产物
+dist-upload/
