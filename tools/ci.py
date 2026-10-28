@@ -138,6 +138,23 @@ def main() -> int:
     if code != 0:
         return fail("前端构建")
 
+    # 产物随仓库走（使用者无需装 Node），所以必须保证它和源码同步：
+    # 重新构建后若与已提交的内容有差异，说明有人改了源码却忘了提交产物。
+    say("构建产物与源码同步")
+    diff = subprocess.run(
+        ["git", "status", "--porcelain", "--", "frontend/dist"],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if diff.returncode != 0:
+        print("    （跳过：不是 git 仓库）", flush=True)
+    elif diff.stdout.strip():
+        print(diff.stdout)
+        return fail("frontend/dist 与源码不同步，请提交重新构建的产物")
+    else:
+        print("    一致", flush=True)
+
     # ---------- 6. 起服务 + 渲染冒烟 ----------
     say(f"启动服务（端口 {args.port}）")
     log = TMP / "ci-server.log"

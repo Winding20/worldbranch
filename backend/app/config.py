@@ -1,4 +1,4 @@
-"""应用配置。"""
+﻿"""应用配置。"""
 
 from __future__ import annotations
 
@@ -35,7 +35,6 @@ class Config:
         ).split(",")
         if o.strip()
     ]
-    WEB_DIR: Path = PROJECT_DIR / "web"
     #: Vue 3 前端的构建产物目录（在 frontend 目录执行 node build.mjs 生成）
     VUE_DIST: Path = PROJECT_DIR / "frontend" / "dist"
 

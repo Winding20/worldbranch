@@ -1,4 +1,4 @@
-"""API 层测试。"""
+﻿"""API 层测试。"""
 
 from __future__ import annotations
 
@@ -118,19 +118,19 @@ def test_advance_rejects_bad_input(client):
 
 
 def test_index_page_served(client):
-    """根路径要么重定向到 Vue 界面，要么回退到旧版页面。"""
+    """根路径：前端已构建则重定向到 /app/，未构建则明确说明。"""
     resp = client.get("/")
     assert resp.status_code in (200, 302)
     if resp.status_code == 200:
-        assert "WorldBranch" in resp.get_data(as_text=True)
+        # 未构建时给出可操作的提示，而不是空白页
+        assert "构建" in resp.get_data(as_text=True)
     else:
         assert resp.headers["Location"].endswith("/app/")
 
 
-def test_legacy_page_served(client):
-    resp = client.get("/legacy")
-    assert resp.status_code == 200
-    assert "WorldBranch" in resp.get_data(as_text=True)
+def test_legacy_page_removed(client):
+    """旧版静态界面已移除，不应再对外提供。"""
+    assert client.get("/legacy").status_code == 404
 
 
 def test_vue_app_is_served(client):

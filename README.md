@@ -60,30 +60,31 @@
 
 ---
 
-## 现在有什么
+## 目录结构
 
 ```
-新项目开发/
-├─ backend/                  Flask + SQLAlchemy 后端
+WorldBranch/
+├─ backend/                     Flask + SQLAlchemy 后端
 │  ├─ app/
-│  │  ├─ models.py           世界模板 / 分支 / 地区状态 / 事件 / 快照 / 转运通道
-│  │  ├─ services.py         建分支、派生、干预、因果链
-│  │  ├─ api/                worlds、branches 两个蓝图
-│  │  ├─ engine/
-│  │  │  ├─ rules.py         纯函数规则层（可单测，不碰数据库）
-│  │  │  └─ simulation.py    时间推进、调运传导、事件生成、快照
-│  │  ├─ seed/tang_755.py    安史之乱切片（8 地区、21 史实、7 岔路口）
-│  │  └─ cli.py              init-db / seed / new-branch / advance / show
-│  ├─ tests/                 178 个测试（规则、引擎、史实、决策、军事、忠诚、API、AI）
-│  └─ run.py                 开发入口
-├─ frontend/                 Vue 3 + Vite 前端（新界面）
-│  ├─ src/components/        MapView / EventFeed / RegionDetail /
-│  │                         DecisionPanel / EndingCard / AiPanel / BranchCompare
-│  ├─ build.mjs              构建脚本（绕过本机 spawn 限制）
-│  └─ smoke.mjs              jsdom 渲染冒烟测试
-├─ web/                      旧版静态界面（保留在 /legacy 作为回退）
-├─ docs/                     设计文档、开发环境说明、部署说明
-└─ tools/                    地理数据生成、数据校验、诊断与演示脚本
+│  │  ├─ models.py              世界模板 / 分支 / 地区状态 / 事件 / 快照 / 决策
+│  │  ├─ services.py            建分支、派生、干预、因果链
+│  │  ├─ api/                   worlds / branches / ai 三个蓝图
+│  │  ├─ engine/                推演、史实、决策、军事、忠诚、朝议、官职、结局
+│  │  ├─ seed/                  内置世界（tang_755 主世界，tang_750 回归基线）
+│  │  └─ cli.py                 init-db / seed / new-branch / advance / show
+│  ├─ tests/                    178 个用例
+│  ├─ serve.py                  生产入口（waitress，一键启动用的就是它）
+│  └─ run.py                    开发入口（热重载）
+├─ frontend/                    Vue 3 + Vite
+│  ├─ src/                      App.vue、组件、api.js、sound.js
+│  ├─ dist/                     构建产物（随仓库走，使用者无需装 Node）
+│  ├─ build.mjs                 构建脚本
+│  └─ smoke.mjs / smoke-mobile.mjs   jsdom 渲染冒烟
+├─ docs/                        设计文档、AI 分析层、部署（可选）、手机访问
+├─ deploy/                      systemd / nginx / 部署脚本（可选，默认用不到）
+├─ tools/                       启动、CI、打包、数据校验、示例
+├─ start.bat / start.sh         一键启动
+└─ LICENSE · README.md
 ```
 
 后端引擎分四层，每层只做一件事：
@@ -105,8 +106,8 @@
 | 路径 | 说明 |
 |---|---|
 | `/` | 重定向到 `/app/` |
-| `/app/` | **Vue 3 新版界面** |
-| `/legacy` | 旧版原生 JS 界面（回退用） |
+| `/app/` | **Vue 3 界面** |
+| `/api/...` | REST 接口 |
 
 ## 前端构建
 
@@ -187,11 +188,11 @@ python run.py            # 开发模式：热重载
 想先看它跑得对不对，不必开界面：
 
 ```powershell
-python tools\demo_anshi.py      # 八年史实线：21 件史实是否按年月应验
-python tools\demo_diverge.py    # 三场景对比：催战 / 坚守 / 主将病故
-python tools\demo_end_tang.py   # 两种打法的八年结局与分项得分
-python tools\demo_counsel.py    # 朝议：谁在进言、主哪一项、为什么
-python tools\demo_loyalty.py    # 忠诚逐年变化：功高者如何离心
+python tools\demo\demo_anshi.py      # 八年史实线：21 件史实是否按年月应验
+python tools\demo\demo_diverge.py    # 三场景对比：催战 / 坚守 / 主将病故
+python tools\demo\demo_end_tang.py   # 两种打法的八年结局与分项得分
+python tools\demo\demo_counsel.py    # 朝议：谁在进言、主哪一项、为什么
+python tools\demo\demo_loyalty.py    # 忠诚逐年变化：功高者如何离心
 python tools\data_provenance.py # 每个数字从哪来
 ```
 
@@ -269,7 +270,7 @@ AI 能力建立在**用户自己的 API Key** 上，不绑定任何厂商，详�
 内置知识库有 5 篇资料（赋税与转运、军事结构、灾荒赈济、行政区划、建模假设），
 每篇都标注来源与可信度（`primary` / `secondary` / `assumption`）。
 
-实测材料示例（`python tools/demo_ai.py`）：
+实测材料示例（`python tools/demo/demo_ai.py`）：
 
 ```
 【世界】唐朝（天宝九年（750 年））
@@ -296,7 +297,7 @@ AI 能力建立在**用户自己的 API Key** 上，不绑定任何厂商，详�
 | 漕运受阻 | 江淮粮价走高 |
 | 河北举兵 | 臣属度 < −0.15 |
 
-`python tools/demo_ending.py <策略>` 可跑三种打法的五年结局。
+`python tools/demo/demo_ending.py <策略>` 可跑三种打法的五年结局。
 它现在的作用是**回归基线**：证明引擎不依赖唐朝切片的特殊数据也能跑。
 
 ## 核心概念
@@ -324,7 +325,7 @@ AI 能力建立在**用户自己的 API Key** 上，不绑定任何厂商，详�
 每个事件都在 `causes` 里记录上游事件 id，`GET /events/<id>/chain` 可以一路回溯到
 最初的那次干预。界面上点击事件即可展开这条链。
 
-实测示例（`python tools/demo_chain.py`）：
+实测示例（`python tools/demo/demo_chain.py`）：
 
 ```
 [干预] （干预）河北道歉收  (event id=1)
@@ -352,7 +353,7 @@ AI 能力建立在**用户自己的 API Key** 上，不绑定任何厂商，详�
 - 只在 A 发生、只在 B 发生的事件
 - 自动识别派生关系与共同祖先
 
-实测示例（`python tools/demo_compare.py`）：
+实测示例（`python tools/demo/demo_compare.py`）：
 
 ```
 A: 750-08-01  B: 750-08-01
@@ -425,3 +426,31 @@ python tools\diagnose_history.py         # 逐条打印史实判定结果
 - 模拟精度与地图缩放互相独立，且一个世界统一精度。
 - 缺数据标注未知/估算与来源，不编造精确数字。
 - 同一 seed 必得同一结果（可复现）。
+---
+
+## 参与
+
+欢迎提 Issue 与 PR。改动前建议先跑一遍：
+
+```powershell
+python tools\ci.py
+```
+
+它会依次检查启动脚本、后端测试、史料数据完整性、建库播种、前端构建、
+构建产物与源码是否同步、桌面与窄屏渲染冒烟、生产入口、接口自检、发布包。
+
+几条约定：
+
+- **史料引用要给出处**。新增史实事件请填 `source`，并确保 `conditions`
+  与 `effects` 里引用的地区 / 人物 / 事件 key 都真实存在（CI 会校验）。
+- **不要把建模值写成史料**。忠诚、才略、建议立场都是推算结果，
+  界面上必须能与「史载原文」区分开。
+- **改了前端源码要一起提交 `frontend/dist`**。产物随仓库走，是为了让
+  使用者不装 Node 也能运行；CI 会检查两者是否一致。
+
+## 许可
+
+[MIT](LICENSE)
+
+史实部分引用的史料（《资治通鉴》《旧唐书》《新唐书》等）属于公有领域；
+项目中的建模参数、界面与代码以 MIT 授权。

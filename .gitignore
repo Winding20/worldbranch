@@ -1,4 +1,4 @@
-﻿# --- Python ---
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.so
@@ -16,23 +16,33 @@ htmlcov/
 # --- Node ---
 node_modules/
 .npm-cache/
-dist/
 dist-ssr/
 *.local
 .vite/
-# Vue 前端构建产物需要随仓库走，方便服务器直接部署
-!frontend/dist/
 frontend/dist-smoke/
+
+# 前端构建产物随仓库走：使用者解压/克隆后无需装 Node 即可运行。
+# 但 dist/ 是所有前端项目的默认忽略规则，这里显式放行。
+dist/
+!frontend/dist/
+!frontend/dist/**
 
 # --- 项目本地 ---
 .db
 *.sqlite
 *.sqlite3
 .tmp/
+*.log
+dist-package/
+
+# 本地数据库与上传物（不随仓库走）
+backend/instance/
+
+# --- 配置 ---
 .env
 .env.*
 !.env.example
-*.log
+backend/.env.mysql.bak
 
 # --- 编辑器 / 系统 ---
 .vscode/
@@ -42,8 +52,3 @@ Thumbs.db
 desktop.ini
 ~$*
 *.tmp
-# 打包产物
-dist-package/
-backend/.env.mysql.bak
-# 本地数据库（SQLite）与上传物
-backend/instance/

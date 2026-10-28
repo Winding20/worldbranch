@@ -1,0 +1,29 @@
+# 统一换行，避免 Windows / Linux 之间反复出现整文件 diff
+* text=auto eol=lf
+
+# 批处理必须是 CRLF，否则 cmd.exe 会把命令解析错
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 脚本与配置
+*.sh text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+
+# 二进制：不要做文本转换
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.pdf binary
+*.db binary
+*.tar.gz binary
+*.exe binary

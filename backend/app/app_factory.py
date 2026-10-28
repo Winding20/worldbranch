@@ -1,4 +1,4 @@
-"""应用工厂。"""
+﻿"""应用工厂。"""
 
 from __future__ import annotations
 
@@ -16,12 +16,7 @@ def get_db() -> Database:
 def create_app(overrides: dict | None = None) -> Flask:
     cfg = get_config(overrides)
 
-    app = Flask(
-        __name__,
-        static_folder=str(cfg.WEB_DIR / "static"),
-        static_url_path="/static",
-        template_folder=str(cfg.WEB_DIR),
-    )
+    app = Flask(__name__)
     app.config["WORLDBRANCH"] = cfg
     app.json.ensure_ascii = False
 
@@ -36,19 +31,16 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     @app.get("/")
     def index():
-        """默认入口：新版 Vue 界面；没构建时回退到旧版静态页。"""
-        from flask import redirect, render_template
+        """默认入口：Vue 界面。"""
+        from flask import redirect
 
         if (cfg.VUE_DIST / "index.html").exists():
             return redirect("/app/")
-        return render_template("index.html")
-
-    @app.get("/legacy")
-    def legacy():
-        """旧版静态界面，保留作为回退。"""
-        from flask import render_template
-
-        return render_template("index.html")
+        return (
+            "前端尚未构建。请先执行：cd frontend && node build.mjs"
+            "（或用 start.bat / start.sh 启动，脚本会处理）",
+            503,
+        )
 
     # ---- Vue 3 新界面：构建产物由 Vite 输出到 frontend/dist ----
     vue_dist = cfg.VUE_DIST
