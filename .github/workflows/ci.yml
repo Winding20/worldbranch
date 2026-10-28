@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 # 与本地 `python tools/ci.py` 完全同一套检查，避免两套脚本走偏。
 on:
@@ -38,4 +38,6 @@ jobs:
 
       - name: 失败时输出服务端日志
         if: failure()
-        run: cat .tmp/ci-server.log 2>/dev/null || true
+        run: |
+          echo "--- run.py ---"; cat .tmp/ci-server.log 2>/dev/null || true
+          echo "--- serve.py ---"; cat .tmp/ci-serve.log 2>/dev/null || true

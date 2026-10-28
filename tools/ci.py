@@ -57,6 +57,17 @@ def node_bin() -> str:
     return exe
 
 
+def stop(proc: subprocess.Popen) -> None:
+    """收掉子进程，别留僵尸。"""
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=8)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
 def wait_health(url: str, timeout: float = 40.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -148,12 +159,40 @@ def main() -> int:
         if code != 0:
             return fail("渲染冒烟（窄屏）")
     finally:
-        if server.poll() is None:
-            server.terminate()
-            try:
-                server.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                server.kill()
+        stop(server)
+
+    # ---------- 6. 生产入口 ----------
+    # 部署用的是 serve.py（waitress），这里把同一条路径也跑一遍，
+    # 免得"开发能跑、上生产就崩"。
+    say("生产入口 serve.py")
+    prod_port = args.port + 1
+    prod_env = dict(env)
+    prod_env["PORT"] = str(prod_port)
+    prod_env["HOST"] = "127.0.0.1"
+    prod_env["THREADS"] = "4"
+    prod_log = TMP / "ci-serve.log"
+    prod = subprocess.Popen(
+        [sys.executable, "serve.py"],
+        cwd=str(BACKEND),
+        env=prod_env,
+        stdout=prod_log.open("wb"),
+        stderr=subprocess.STDOUT,
+    )
+    try:
+        prod_url = f"http://127.0.0.1:{prod_port}"
+        if not wait_health(f"{prod_url}/api/health"):
+            print(prod_log.read_text(encoding="utf-8", errors="replace")[-2000:])
+            return fail("serve.py 未就绪")
+        print("    serve.py 已就绪", flush=True)
+
+        say("部署自检 deploy_check")
+        code = run(
+            [sys.executable, "tools/deploy_check.py", prod_url], ROOT, env
+        )
+        if code != 0:
+            return fail("部署自检")
+    finally:
+        stop(prod)
 
     print("\n✓ 全部通过", flush=True)
     return 0
