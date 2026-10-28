@@ -88,6 +88,7 @@ const checks = {
   "有进度条": Boolean(window.document.querySelector(".progress-track")),
   "有抽屉开关": Boolean(window.document.querySelector(".drawer-toggle")),
   "有音效开关": Boolean(window.document.querySelector(".sound-toggle")),
+  "没有失效的旧版入口": !/旧版|legacy/.test(window.document.body.innerHTML),
   "无运行时错误": errors.length === 0,
 };
 

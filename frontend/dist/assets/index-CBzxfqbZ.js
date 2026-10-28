@@ -2240,7 +2240,7 @@ rw(boot);
 return (_ctx, _cache) => {
   return (ln(), lo(i8, null, [
     lf("header", _hoisted_1, [
-      _cache[15] || (_cache[15] = lf("div", { class: "brand" }, [
+      _cache[14] || (_cache[14] = lf("div", { class: "brand" }, [
         lf("span", { class: "brand-mark" }, "WB"),
         lf("div", null, [
           lf("h1", null, "WorldBranch"),
@@ -2275,11 +2275,7 @@ return (_ctx, _cache) => {
               _cache[12] || (_cache[12] = lv("已推进 ", -1)),
               lf("b", null, eh(branch.value.tick_index), 1),
               _cache[13] || (_cache[13] = lv(" 月", -1))
-            ]),
-            _cache[14] || (_cache[14] = lf("a", {
-              class: "chip link",
-              href: "/legacy"
-            }, "旧版界面", -1))
+            ])
           ]))
         : l_("", true)
     ]),
@@ -2301,12 +2297,12 @@ return (_ctx, _cache) => {
             lf("section", _hoisted_10, [
               lf("div", _hoisted_11, [
                 lf("div", _hoisted_12, [
-                  _cache[18] || (_cache[18] = lf("label", { for: "scope" }, "观察尺度", -1)),
+                  _cache[17] || (_cache[17] = lf("label", { for: "scope" }, "观察尺度", -1)),
                   lf("select", {
                     id: "scope",
                     value: scope.value,
                     onChange: _cache[3] || (_cache[3] = $event => (onScopeSelect($event.target.value)))
-                  }, [...(_cache[16] || (_cache[16] = [
+                  }, [...(_cache[15] || (_cache[15] = [
                     lf("option", { value: "world" }, "世界级", -1),
                     lf("option", { value: "nation" }, "国家级", -1),
                     lf("option", { value: "region" }, "地区级", -1),
@@ -2314,7 +2310,7 @@ return (_ctx, _cache) => {
                   ]))], 40, _hoisted_13),
                   (manualScope.value)
                     ? (ln(), lo("span", _hoisted_14, [
-                        _cache[17] || (_cache[17] = lv(" 手动模式 ", -1)),
+                        _cache[16] || (_cache[16] = lv(" 手动模式 ", -1)),
                         lf("button", {
                           class: "link-btn",
                           onClick: backToAuto
@@ -2322,7 +2318,7 @@ return (_ctx, _cache) => {
                       ]))
                     : (ln(), lo("span", _hoisted_15, "跟随缩放自动切换"))
                 ]),
-                _cache[19] || (_cache[19] = lf("div", { class: "legend" }, [
+                _cache[18] || (_cache[18] = lf("div", { class: "legend" }, [
                   lf("span", null, [
                     lf("i", { style: {"background":"#5a7a96"} }),
                     lv("道界")
@@ -2355,20 +2351,20 @@ return (_ctx, _cache) => {
               lf("div", _hoisted_20, [
                 (tang.value)
                   ? (ln(), lo("span", _hoisted_21, [
-                      _cache[20] || (_cache[20] = lv("府库 ", -1)),
+                      _cache[19] || (_cache[19] = lv("府库 ", -1)),
                       lf("b", null, eh(Math.round(tang.value.treasury).toLocaleString()), 1)
                     ]))
                   : l_("", true),
                 (allegiance.value)
                   ? (ln(), lo("span", _hoisted_22, [
-                      _cache[21] || (_cache[21] = lv(" 河北 ", -1)),
+                      _cache[20] || (_cache[20] = lv(" 河北 ", -1)),
                       lf("b", null, eh(allegiance.value.value.toFixed(2)), 1),
                       lv(" " + eh(allegiance.value.label), 1)
                     ]))
                   : l_("", true),
                 (ending.value)
                   ? (ln(), lo("span", _hoisted_23, [
-                      _cache[22] || (_cache[22] = lv("结局 ", -1)),
+                      _cache[21] || (_cache[21] = lv("结局 ", -1)),
                       lf("b", null, eh(ending.value.grade), 1)
                     ]))
                   : l_("", true)
@@ -2379,13 +2375,13 @@ return (_ctx, _cache) => {
             }, [
               (ending.value)
                 ? (ln(), lo("div", _hoisted_24, [
-                    _cache[23] || (_cache[23] = lf("h2", null, "五年之后", -1)),
+                    _cache[22] || (_cache[22] = lf("h2", null, "五年之后", -1)),
                     lg(EndingCard, { ending: ending.value }, null, 8, ["ending"])
                   ]))
                 : l_("", true),
               (decisionResult.value)
                 ? (ln(), lo("div", _hoisted_25, [
-                    _cache[24] || (_cache[24] = lf("h2", null, "刚才的决断", -1)),
+                    _cache[23] || (_cache[23] = lf("h2", null, "刚才的决断", -1)),
                     lf("div", _hoisted_26, [
                       lf("div", _hoisted_27, eh(decisionResult.value.title) + " → " + eh(decisionResult.value.option), 1),
                       (!decisionResult.value.applied.length)
@@ -2418,7 +2414,7 @@ return (_ctx, _cache) => {
                     lf("div", _hoisted_32, eh(scenario.value.role), 1),
                     lf("p", _hoisted_33, eh(scenario.value.goal), 1),
                     lf("details", _hoisted_34, [
-                      _cache[25] || (_cache[25] = lf("summary", null, "当前局面", -1)),
+                      _cache[24] || (_cache[24] = lf("summary", null, "当前局面", -1)),
                       lf("p", _hoisted_35, eh(scenario.value.briefing), 1),
                       lf("ul", _hoisted_36, [
                         (ln(true), lo(i8, null, rU(scenario.value.pressures, (p) => {
@@ -2449,7 +2445,7 @@ return (_ctx, _cache) => {
               ]),
               nf(lf("div", _hoisted_40, [
                 lf("h2", null, [
-                  _cache[26] || (_cache[26] = lv(" 待决事项 ", -1)),
+                  _cache[25] || (_cache[25] = lv(" 待决事项 ", -1)),
                   (decisions.value.length)
                     ? (ln(), lo("span", _hoisted_41, eh(decisions.value.length), 1))
                     : l_("", true)
@@ -2464,7 +2460,7 @@ return (_ctx, _cache) => {
                 [sb, panel.value === 'decide']
               ]),
               nf(lf("div", _hoisted_42, [
-                _cache[27] || (_cache[27] = lf("h2", null, "各军", -1)),
+                _cache[26] || (_cache[26] = lf("h2", null, "各军", -1)),
                 lf("div", _hoisted_43, [
                   lf("span", null, "唐军 " + eh(Math.round(armies.value.tang_total).toLocaleString()), 1),
                   lf("span", null, "燕军 " + eh(Math.round(armies.value.yan_total).toLocaleString()), 1)
@@ -2501,7 +2497,7 @@ return (_ctx, _cache) => {
                 [sb, panel.value === 'war']
               ]),
               nf(lf("div", _hoisted_54, [
-                _cache[28] || (_cache[28] = lf("h2", null, "人物", -1)),
+                _cache[27] || (_cache[27] = lf("h2", null, "人物", -1)),
                 (ln(true), lo(i8, null, rU(loyalty.value, (p) => {
                   return (ln(), lo("div", {
                     key: p.key,
@@ -2526,8 +2522,8 @@ return (_ctx, _cache) => {
                 [sb, panel.value === 'people']
               ]),
               nf(lf("div", _hoisted_62, [
-                _cache[29] || (_cache[29] = lf("h2", null, "史实对照", -1)),
-                _cache[30] || (_cache[30] = lf("p", { class: "hint" }, "按史载发生的记为「应验」；因前提改变而没有发生的记为「改道」。", -1)),
+                _cache[28] || (_cache[28] = lf("h2", null, "史实对照", -1)),
+                _cache[29] || (_cache[29] = lf("p", { class: "hint" }, "按史载发生的记为「应验」；因前提改变而没有发生的记为「改道」。", -1)),
                 (historyStatus.value.diverged.length)
                   ? (ln(), lo("div", _hoisted_63, [
                       lf("div", _hoisted_64, "改道 " + eh(historyStatus.value.diverged.length), 1),
@@ -2559,7 +2555,7 @@ return (_ctx, _cache) => {
               ]),
               (changes.value.length)
                 ? (ln(), lo("div", _hoisted_71, [
-                    _cache[31] || (_cache[31] = lf("h2", null, "本期变化", -1)),
+                    _cache[30] || (_cache[30] = lf("h2", null, "本期变化", -1)),
                     lf("div", _hoisted_72, [
                       (ln(true), lo(i8, null, rU(changes.value, (c) => {
                         return (ln(), lo("div", {
@@ -2604,7 +2600,7 @@ return (_ctx, _cache) => {
                           ])
                         ]))
                       }), 128)),
-                      _cache[32] || (_cache[32] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
+                      _cache[31] || (_cache[31] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
                     ]))
                   : (ln(), la(RegionDetail, {
                       key: 1,
@@ -2614,7 +2610,7 @@ return (_ctx, _cache) => {
               ]),
               lf("div", _hoisted_81, [
                 lf("h2", null, [
-                  _cache[33] || (_cache[33] = lv("事件流 ", -1)),
+                  _cache[32] || (_cache[32] = lv("事件流 ", -1)),
                   lf("span", _hoisted_82, eh(events.value.length), 1)
                 ]),
                 lg(EventFeed, {
@@ -2673,7 +2669,7 @@ return (_ctx, _cache) => {
             (showOverlay.value)
               ? (ln(), lo("div", _hoisted_95, [
                   lf("div", _hoisted_96, [
-                    _cache[34] || (_cache[34] = lf("div", { class: "sheet-head" }, [
+                    _cache[33] || (_cache[33] = lf("div", { class: "sheet-head" }, [
                       lf("span", null, "奏"),
                       lf("em", null, "决断之后本月即结算")
                     ], -1)),

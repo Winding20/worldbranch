@@ -304,7 +304,6 @@ onMounted(boot);
       <span class="chip">时间 <b>{{ branch.current_date }}</b></span>
       <span class="chip">精度 <b>{{ PRECISIONS.find((p) => p.key === branch.precision)?.name }}</b></span>
       <span class="chip">已推进 <b>{{ branch.tick_index }}</b> 月</span>
-      <a class="chip link" href="/legacy">旧版界面</a>
     </div>
   </header>
 
