@@ -112,6 +112,51 @@ def build() -> Path:
     return tar_path
 
 
+def rmtree_retry(path: Path, attempts: int = 5) -> None:
+    """Windows 上子进程退出后目录可能还被占用一会儿，重试几次。"""
+    for i in range(attempts):
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError:
+            if i == attempts - 1:
+                raise
+            time.sleep(0.6)
+
+
+def kill_listener(port: int) -> None:
+    """把监听该端口的进程结束掉。
+
+    Windows 上 terminate 一个父进程不会连带它的子进程，
+    bootstrap 拉起的 serve.py 会继续占着目录与端口。
+    """
+    try:
+        if os.name == "nt":
+            out = subprocess.run(
+                ["netstat", "-ano"], capture_output=True, text=True, timeout=15
+            ).stdout
+            pids = set()
+            for line in out.splitlines():
+                parts = line.split()
+                if len(parts) >= 5 and parts[0].upper().startswith("TCP"):
+                    if parts[1].endswith(f":{port}") and parts[3] == "LISTENING":
+                        pids.add(parts[4])
+            for pid in pids:
+                subprocess.run(
+                    ["taskkill", "/PID", pid, "/F"], capture_output=True, timeout=15
+                )
+        else:
+            subprocess.run(
+                ["bash", "-c", f"lsof -ti:{port} | xargs -r kill -9"],
+                capture_output=True,
+                timeout=15,
+            )
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def wait_health(url: str, timeout: float = 40.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -139,7 +184,7 @@ def verify(tar_path: Path, port: int = 5320) -> int:
     CHECK_DIR.mkdir(parents=True)
 
     with tarfile.open(tar_path) as tar:
-        tar.extractall(CHECK_DIR)
+        tar.extractall(CHECK_DIR, filter="data")
     roots = [p for p in CHECK_DIR.iterdir() if p.is_dir()]
     if not roots:
         print("✗ 解包后没有目录")
@@ -205,12 +250,12 @@ def verify_oneclick(tar_path: Path, port: int = 5330) -> int:
     用 --python 指向已有环境，避免在验证时又去联网装一遍依赖；
     开库、建表、播种、起服务、等健康检查这些真实路径全都走一遍。
     """
-    target = ROOT / ".tmp" / "oneclick"
-    if target.exists():
-        shutil.rmtree(target)
+    # 每次用独立目录：上一次的残留（尤其被进程占住的）不会影响这一次
+    target = ROOT / ".tmp" / f"oneclick-{os.getpid()}"
+    rmtree_retry(target)
     target.mkdir(parents=True)
     with tarfile.open(tar_path) as tar:
-        tar.extractall(target)
+        tar.extractall(target, filter="data")
     roots = [p for p in target.iterdir() if p.is_dir()]
     if not roots:
         print("✗ 解包后没有目录")
@@ -252,13 +297,16 @@ def verify_oneclick(tar_path: Path, port: int = 5330) -> int:
             print("✗ 部署自检未通过")
             return 1
     finally:
-        # bootstrap 会拉起 serve.py 子进程，这里按端口兜底清理
+        # bootstrap 会拉起 serve.py 子进程，这里按端口兜底清理，
+        # 否则残留进程会占着 .tmp/oneclick 目录，下一次验证就删不掉。
         if proc.poll() is None:
             proc.terminate()
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 proc.kill()
+        kill_listener(port)
+        time.sleep(0.5)
 
     print("✓ 解压后一键启动可用")
     return 0
