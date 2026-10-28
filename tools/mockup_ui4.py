@@ -1,4 +1,4 @@
-"""按当前实现画一张界面效果图，便于与真实页面比对。
+﻿"""按当前实现画一张界面效果图，便于与真实页面比对。
 
 对应 frontend/src/App.vue 的「舞台」结构：
   地图铺满 → 顶部 HUD → 底部动作条 → 右侧抽屉 → 决策浮层
@@ -62,7 +62,7 @@ def rings_of(item):
     return [ring for poly in coords for ring in poly]
 
 
-def draw_map(size, dim=0.0):
+def draw_map(size, dim=0.0, focus: str | None = None):
     """画地图。dim 为压暗程度（0 不压暗，1 全黑）。"""
     dao = json.loads(GEO.read_text(encoding="utf-8"))["dao"]
     w, h = size
@@ -94,10 +94,20 @@ def draw_map(size, dim=0.0):
 
     for key, item in dao.items():
         fill = REGION_FILL.get(key, (190, 182, 158))
+        # 聚光：非焦点地区压暗（与 CSS 里 opacity 0.22 的效果一致）
+        if focus and key != focus:
+            fill = tuple(int(c * 0.22) for c in fill)
         for ring in rings_of(item):
             pts = [to_xy(lon, lat) for lon, lat in ring]
             if len(pts) >= 3:
                 d.polygon(pts, fill=fill, outline=(30, 26, 22), width=2)
+
+    # 焦点地区加一圈金边
+    if focus and focus in dao:
+        for ring in rings_of(dao[focus]):
+            pts = [to_xy(lon, lat) for lon, lat in ring]
+            if len(pts) >= 3:
+                d.line(pts + [pts[0]], fill=ACCENT2, width=4, joint="curve")
 
     names = {
         "changan": "京兆", "lingwu": "灵武", "luoyang": "河南府", "suiyang": "睢阳",
@@ -116,7 +126,15 @@ def draw_map(size, dim=0.0):
 
 
 def desktop() -> Image.Image:
-    img = draw_map((W, H), dim=0.72)
+    # 遮罩只在右半加重，左半留给聚光（与 CSS 的渐变一致）
+    img = draw_map((W, H), dim=0.0, focus="hebei_plain")
+    veil = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(veil)
+    for x in range(W):
+        t = x / W
+        alpha = int(30 + max(0.0, (t - 0.55) / 0.45) * 120) if t > 0.55 else int(12 + t * 30)
+        vd.line([(x, 0), (x, H)], fill=(8, 11, 14, alpha))
+    img = Image.alpha_composite(img.convert("RGBA"), veil).convert("RGB")
     d = ImageDraw.Draw(img)
 
     # ---------- 顶部 HUD ----------
@@ -157,8 +175,8 @@ def desktop() -> Image.Image:
     d.text((W - 21, H - 69), "1", font=F(CJK, 11), fill=(255, 255, 255), anchor="mm")
 
     # ---------- 决策浮层 ----------
-    cw, ch = 660, 560
-    cx, cy = (W - cw) // 2, (H - ch) // 2 - 20
+    cw, ch = 540, 560
+    cx, cy = W - cw - 28, (H - ch) // 2 - 20
     d.rounded_rectangle([cx, cy, cx + cw, cy + ch], radius=14, fill=PANEL, outline=ACCENT2, width=1)
 
     d.rounded_rectangle([cx + 22, cy + 22, cx + 56, cy + 56], radius=6, fill=DANGER)

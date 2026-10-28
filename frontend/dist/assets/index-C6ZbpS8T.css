@@ -888,21 +888,29 @@ select {
 .side-panel.open { transform: none; }
 
 /* ============================ 决策浮层 ============================ */
+/* 遮罩只轻轻压一层：地图自己已经把非焦点地区压暗了，
+   这层若再压 0.7，聚光就整个被盖住，等于白做。 */
 .decision-overlay {
   position: absolute;
   inset: 0;
   z-index: 20;
   display: grid;
-  place-items: center;
+  /* 宽屏靠右放，左半张地图留给聚光；窄屏再铺满 */
+  justify-items: end;
+  align-items: center;
   padding: 24px;
-  background: rgba(8, 11, 14, 0.72);
-  backdrop-filter: blur(2px);
+  background: linear-gradient(
+    90deg,
+    rgba(8, 11, 14, 0.12) 0%,
+    rgba(8, 11, 14, 0.28) 55%,
+    rgba(8, 11, 14, 0.55) 100%
+  );
   animation: fade-in 0.18s ease;
 }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 .decision-sheet {
-  width: min(640px, 100%);
+  width: min(540px, 100%);
   max-height: 100%;
   overflow-y: auto;
   padding: 22px 24px 18px;
@@ -1039,8 +1047,13 @@ select {
   .advance-group .advance { padding: 8px 12px; font-size: 12px; }
   .drawer-toggle { padding: 8px 12px; font-size: 12px; }
 
-  /* 决策浮层：手机上铺满整屏 */
-  .decision-overlay { padding: 0; place-items: stretch; }
+  /* 决策浮层：手机上铺满整屏（手机上聚光让位给可读性） */
+  .decision-overlay {
+    padding: 0;
+    place-items: stretch;
+    justify-items: stretch;
+    background: rgba(8, 11, 14, 0.9);
+  }
   .decision-sheet {
     width: auto;
     max-height: none;

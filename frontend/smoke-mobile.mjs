@@ -1,4 +1,4 @@
-// 窄屏（手机尺寸）挂载测试。
+﻿// 窄屏（手机尺寸）挂载测试。
 //
 // jsdom 不做真实布局，媒体查询不生效，所以这里验证的是 **JS 层**的手机行为：
 //   - 窄屏下侧栏抽屉默认收起
@@ -105,6 +105,11 @@ check("推进后出现全屏决策", Boolean(sheet));
 check(
   "决策里有可点的选项",
   (sheet?.querySelectorAll(".d-option").length || 0) > 0
+);
+// 手机上网浮层是不透明整屏，聚光被盖住是刻意的；这里只确认它仍被算出来
+check(
+  "聚光点仍已算出",
+  Boolean(window.document.querySelector(".spotlight-ring"))
 );
 
 console.log("\n【窄屏：无报错】");
