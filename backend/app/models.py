@@ -1,4 +1,4 @@
-"""领域模型。
+﻿"""领域模型。
 
 设计要点（对应设计文档）：
 - ``World`` 是「世界模板」：地区、势力、初始数据、规则参数。
@@ -449,6 +449,8 @@ class Decision(Base):
     advice: Mapped[list[Any]] = mapped_column(JSON, default=list)
     #: 关联的键（例如史实事件 key），用于把决策回溯到它所属的历史节点
     ref_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 这件事发生在哪个地区。界面据此把地图「聚光」到出事的地方。
+    focus_region: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     #: pending / resolved / expired
     status: Mapped[str] = mapped_column(String(16), default="pending")
@@ -469,6 +471,7 @@ class Decision(Base):
             "description": self.description,
             "trigger_event_id": self.trigger_event_id,
             "ref_key": self.ref_key,
+            "focus_region": self.focus_region,
             "options": self.options or [],
             "advice": self.advice or [],
             # 朝议是否一致。全票同意时界面可以直接说"朝议一致"

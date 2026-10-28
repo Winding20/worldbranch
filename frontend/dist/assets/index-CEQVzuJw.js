@@ -153,23 +153,26 @@ const _hoisted_1$7 = { class: "map-wrap" };
 const _hoisted_2$7 = ["viewBox"];
 const _hoisted_3$7 = ["transform"];
 const _hoisted_4$7 = ["d", "fill"];
-const _hoisted_5$7 = ["d", "fill"];
-const _hoisted_6$7 = ["d", "fill-opacity"];
+const _hoisted_5$7 = ["d", "fill", "opacity"];
+const _hoisted_6$7 = ["d", "fill-opacity", "opacity"];
 const _hoisted_7$7 = ["d", "onClick"];
 const _hoisted_8$7 = ["d"];
-const _hoisted_9$7 = {
-  key: 1,
+const _hoisted_9$7 = ["d"];
+const _hoisted_10$7 = {
+  key: 2,
   "pointer-events": "none"
 };
-const _hoisted_10$7 = ["x", "y"];
 const _hoisted_11$7 = ["x", "y"];
 const _hoisted_12$6 = ["x", "y"];
-const _hoisted_13$5 = { class: "zoom-group" };
+const _hoisted_13$5 = ["x", "y"];
+const _hoisted_14$5 = { class: "zoom-group" };
 
 
 const _sfc_main$7 = {
   __name: 'MapView',
   props: {
+  //: 需要「聚光」的地区：其余地区压暗，只让这一个亮着
+  focus: { type: String, default: "" },
   regions: { type: Array, default: () => [] },
   selected: { type: String, default: "" },
   scale: { type: String, default: "region" },
@@ -281,6 +284,16 @@ function baseColor(key) {
 
 /** 宏观尺度按势力着色，细尺度按道着色。 */
 const macro = lq(() => props.scale === "world" || props.scale === "nation");
+
+//: 聚光：非焦点地区压暗，焦点地区保持原色并加一圈金边
+const focusShape = lq(() =>
+  props.focus ? shapes.value.find((s) => s.region.region_key === props.focus) : null
+);
+
+function dimOf(regionKey) {
+  if (!props.focus) return 1;
+  return regionKey === props.focus ? 1 : 0.22;
+}
 
 function regionFill(region) {
   if (!macro.value) return baseColor(region.region_key);
@@ -411,6 +424,7 @@ return (_ctx, _cache) => {
             key: `fill-${s.region.region_key}`,
             d: s.d,
             fill: regionFill(s.region),
+            opacity: dimOf(s.region.region_key),
             stroke: "none"
           }, null, 8, _hoisted_5$7))
         }), 128)),
@@ -420,6 +434,7 @@ return (_ctx, _cache) => {
             d: s.d,
             fill: "#d63e2a",
             "fill-opacity": stressAlpha(s.region.price_index),
+            opacity: dimOf(s.region.region_key),
             stroke: "none",
             "pointer-events": "none"
           }, null, 8, _hoisted_6$7))
@@ -445,8 +460,20 @@ return (_ctx, _cache) => {
               "pointer-events": "none"
             }, null, 8, _hoisted_8$7))
           : l_("", true),
+        (focusShape.value)
+          ? (ln(), lo("path", {
+              key: 1,
+              d: focusShape.value.d,
+              fill: "none",
+              stroke: "#d8a24a",
+              "stroke-width": "4",
+              "stroke-linejoin": "round",
+              class: "spotlight-ring",
+              "pointer-events": "none"
+            }, null, 8, _hoisted_9$7))
+          : l_("", true),
         (macro.value)
-          ? (ln(), lo("g", _hoisted_9$7, [
+          ? (ln(), lo("g", _hoisted_10$7, [
               (ln(true), lo(i8, null, rU(factionLabels.value, (f) => {
                 return (ln(), lo("g", {
                   key: `fl-${f.key}`
@@ -456,11 +483,11 @@ return (_ctx, _cache) => {
                     y: f.y - 2,
                     class: "faction-label",
                     "text-anchor": "middle"
-                  }, eh(f.name), 9, _hoisted_10$7)
+                  }, eh(f.name), 9, _hoisted_11$7)
                 ]))
               }), 128))
             ]))
-          : (ln(true), lo(i8, { key: 2 }, rU(shapes.value, (s) => {
+          : (ln(true), lo(i8, { key: 3 }, rU(shapes.value, (s) => {
               return (ln(), lo("g", {
                 key: `label-${s.region.region_key}`,
                 "pointer-events": "none"
@@ -470,19 +497,19 @@ return (_ctx, _cache) => {
                   y: labelPos(s.region)[1] - 2,
                   class: "region-label",
                   "text-anchor": "middle"
-                }, eh(s.region.name), 9, _hoisted_11$7),
+                }, eh(s.region.name), 9, _hoisted_12$6),
                 lf("text", {
                   x: labelPos(s.region)[0],
                   y: labelPos(s.region)[1] + 14,
                   class: "region-sub",
                   "text-anchor": "middle"
-                }, " 粮价 " + eh((s.region.price_index || 1).toFixed(2)), 9, _hoisted_12$6)
+                }, " 粮价 " + eh((s.region.price_index || 1).toFixed(2)), 9, _hoisted_13$5)
               ]))
             }), 128))
       ], 8, _hoisted_3$7)
     ], 42, _hoisted_2$7)),
     _cache[2] || (_cache[2] = lf("div", { class: "map-hint" }, "滚轮缩放 · 拖拽平移 · 点击地区查看详情与干预", -1)),
-    lf("div", _hoisted_13$5, [
+    lf("div", _hoisted_14$5, [
       lf("button", {
         title: "放大",
         onClick: _cache[0] || (_cache[0] = $event => (zoomAt(1.3)))
@@ -501,7 +528,7 @@ return (_ctx, _cache) => {
 }
 
 };
-const MapView = /*#__PURE__*/_export_sfc(_sfc_main$7, [['__scopeId',"data-v-e021cfbe"]]);
+const MapView = /*#__PURE__*/_export_sfc(_sfc_main$7, [['__scopeId',"data-v-a26c8cf1"]]);
 
 const _hoisted_1$6 = { class: "event-list" };
 const _hoisted_2$6 = {
@@ -1807,6 +1834,14 @@ const showOverlay = lq(
   () => Boolean(activeDecision.value) && !overlayDismissed.value
 );
 
+//: 决策浮层开着时，地图只照亮出事的地方
+const spotlightRegion = lq(() => {
+  if (showOverlay.value && activeDecision.value?.focus_region) {
+    return activeDecision.value.focus_region;
+  }
+  return selected.value || "";
+});
+
 const tang = lq(() => factions.value.find((f) => f.faction_key === "tang"));
 const allegiance = lq(
   () => relations.value.find((r) => r.from_key === "fanzhen") || null
@@ -2124,9 +2159,10 @@ return (_ctx, _cache) => {
                 selected: selected.value,
                 scale: scope.value,
                 factions: factions.value,
+                focus: spotlightRegion.value,
                 onSelect: selectRegion,
                 onZoomChange: onZoomChange
-              }, null, 8, ["regions", "selected", "scale", "factions"])
+              }, null, 8, ["regions", "selected", "scale", "factions", "focus"])
             ]),
             lf("header", _hoisted_16, [
               lf("div", _hoisted_17, [

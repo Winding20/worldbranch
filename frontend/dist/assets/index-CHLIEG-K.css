@@ -1,13 +1,13 @@
 
-.map-wrap[data-v-e021cfbe] { position: relative; flex: 1; min-height: 0; overflow: hidden;
+.map-wrap[data-v-a26c8cf1] { position: relative; flex: 1; min-height: 0; overflow: hidden;
 }
-.map-svg[data-v-e021cfbe] { width: 100%; height: 100%; display: block; cursor: grab;
+.map-svg[data-v-a26c8cf1] { width: 100%; height: 100%; display: block; cursor: grab;
 }
-.map-svg.dragging[data-v-e021cfbe] { cursor: grabbing;
+.map-svg.dragging[data-v-a26c8cf1] { cursor: grabbing;
 }
-.region-hit[data-v-e021cfbe] { cursor: pointer;
+.region-hit[data-v-a26c8cf1] { cursor: pointer;
 }
-.region-label[data-v-e021cfbe] {
+.region-label[data-v-a26c8cf1] {
   font-size: 13px;
   fill: #eef4f9;
   paint-order: stroke;
@@ -15,7 +15,7 @@
   stroke-width: 3px;
   user-select: none;
 }
-.region-sub[data-v-e021cfbe] {
+.region-sub[data-v-a26c8cf1] {
   font-size: 10.5px;
   fill: #c6d6e2;
   paint-order: stroke;
@@ -23,7 +23,7 @@
   stroke-width: 2.5px;
   user-select: none;
 }
-.faction-label[data-v-e021cfbe] {
+.faction-label[data-v-a26c8cf1] {
   font-size: 17px;
   font-weight: 700;
   fill: #f2f7fb;
@@ -33,7 +33,7 @@
   letter-spacing: 2px;
   user-select: none;
 }
-.map-hint[data-v-e021cfbe] {
+.map-hint[data-v-a26c8cf1] {
   position: absolute;
   left: 14px;
   bottom: 12px;
@@ -44,14 +44,14 @@
   border-radius: 8px;
   pointer-events: none;
 }
-.zoom-group[data-v-e021cfbe] {
+.zoom-group[data-v-a26c8cf1] {
   position: absolute;
   right: 14px;
   top: 12px;
   display: flex;
   gap: 4px;
 }
-.zoom-group button[data-v-e021cfbe] {
+.zoom-group button[data-v-a26c8cf1] {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -61,7 +61,7 @@
   font-size: 15px;
   cursor: pointer;
 }
-.zoom-group button[data-v-e021cfbe]:hover { border-color: #4aa8d8; color: #4aa8d8;
+.zoom-group button[data-v-a26c8cf1]:hover { border-color: #4aa8d8; color: #4aa8d8;
 }
 
 .event-list[data-v-270f9ada] { display: flex; flex-direction: column; gap: 7px; overflow: auto; flex: 1;
@@ -1057,4 +1057,13 @@ select {
   /* 群里其它面板在窄屏下不要挤压 */
   .panel-block { padding: 12px 14px; }
   .army-totals { flex-direction: column; gap: 2px; }
+}
+/* 聚光：金边缓慢呼吸，提示"就是这里" */
+.spotlight-ring {
+  filter: drop-shadow(0 0 10px rgba(216, 162, 74, 0.65));
+  animation: spotlight 2.4s ease-in-out infinite;
+}
+@keyframes spotlight {
+  0%, 100% { stroke-opacity: 0.55; }
+  50% { stroke-opacity: 1; }
 }

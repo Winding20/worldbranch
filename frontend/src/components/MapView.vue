@@ -1,7 +1,9 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 const props = defineProps({
+  //: 需要「聚光」的地区：其余地区压暗，只让这一个亮着
+  focus: { type: String, default: "" },
   regions: { type: Array, default: () => [] },
   selected: { type: String, default: "" },
   scale: { type: String, default: "region" },
@@ -109,6 +111,16 @@ function baseColor(key) {
 
 /** 宏观尺度按势力着色，细尺度按道着色。 */
 const macro = computed(() => props.scale === "world" || props.scale === "nation");
+
+//: 聚光：非焦点地区压暗，焦点地区保持原色并加一圈金边
+const focusShape = computed(() =>
+  props.focus ? shapes.value.find((s) => s.region.region_key === props.focus) : null
+);
+
+function dimOf(regionKey) {
+  if (!props.focus) return 1;
+  return regionKey === props.focus ? 1 : 0.22;
+}
 
 function regionFill(region) {
   if (!macro.value) return baseColor(region.region_key);
@@ -240,6 +252,7 @@ defineExpose({ zoomAt, reset });
           :key="`fill-${s.region.region_key}`"
           :d="s.d"
           :fill="regionFill(s.region)"
+          :opacity="dimOf(s.region.region_key)"
           stroke="none"
         />
         <!-- 粮价压力叠加 -->
@@ -249,6 +262,7 @@ defineExpose({ zoomAt, reset });
           :d="s.d"
           fill="#d63e2a"
           :fill-opacity="stressAlpha(s.region.price_index)"
+          :opacity="dimOf(s.region.region_key)"
           stroke="none"
           pointer-events="none"
         />
@@ -272,6 +286,18 @@ defineExpose({ zoomAt, reset });
           stroke-width="3"
           pointer-events="none"
         />
+        <!-- 聚光：只把出事的那个地区圈出来 -->
+        <path
+          v-if="focusShape"
+          :d="focusShape.d"
+          fill="none"
+          stroke="#d8a24a"
+          stroke-width="4"
+          stroke-linejoin="round"
+          class="spotlight-ring"
+          pointer-events="none"
+        />
+
         <!-- 标签：宏观尺度只标势力，细尺度标每个道 -->
         <g v-if="macro" pointer-events="none">
           <g v-for="f in factionLabels" :key="`fl-${f.key}`">

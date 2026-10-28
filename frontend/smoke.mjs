@@ -147,11 +147,17 @@ for (const [n, ok] of Object.entries(adviceChecks)) {
 console.log("\n【决策浮层】");
 const overlay = window.document.querySelector(".decision-overlay");
 const sheet = window.document.querySelector(".decision-sheet");
+const ring = window.document.querySelector(".spotlight-ring");
+const dimmed = [...window.document.querySelectorAll("path")].filter(
+  (p) => p.getAttribute("opacity") && Number(p.getAttribute("opacity")) < 0.5
+);
 const overlayChecks = {
   "推进后弹出浮层": Boolean(overlay),
   "浮层里有奏疏卡": Boolean(sheet),
   "浮层里有选项按钮": (sheet?.querySelectorAll(".d-option").length || 0) > 0,
   "浮层里有朝议": /朝议/.test(sheet?.innerHTML || ""),
+  "地图聚光到事发地": Boolean(ring),
+  "其余地区被压暗": dimmed.length > 0,
 };
 for (const [n, ok] of Object.entries(overlayChecks)) {
   console.log(`${ok ? "✓" : "✗"} ${n}`);
@@ -173,6 +179,7 @@ const drawerAfter = window.document.querySelectorAll(".decision-card").length;
 const laterChecks = {
   "稍后再议可收起浮层": afterLater === null,
   "收起后事仍在抽屉里": drawerAfter > 0,
+  "收起后不再聚光": !window.document.querySelector(".spotlight-ring"),
 };
 for (const [n, ok] of Object.entries(laterChecks)) {
   console.log(`${ok ? "✓" : "✗"} ${n}`);

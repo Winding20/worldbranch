@@ -140,6 +140,7 @@ def run_historical_events(
                 tick_index=branch.tick_index,
                 kind="history_fork",
                 ref_key=event.key,
+                focus_region=_fork_focus(event),
                 title=event.fork["title"],
                 description=event.fork["description"],
                 options=event.fork["options"],
@@ -246,6 +247,19 @@ def run_historical_events(
         )
 
     return fired, diverged, forks
+
+
+def _fork_focus(event: HistoricalEvent) -> str | None:
+    """史实岔路口发生在哪里：优先看事件的得失地与前提条件。"""
+    effects = event.effects or {}
+    for key in ("lose_region", "gain_region"):
+        if effects.get(key):
+            return effects[key]
+    conditions = event.conditions or {}
+    for key in ("region_held", "region_lost"):
+        if conditions.get(key):
+            return conditions[key]
+    return None
 
 
 def _apply_effects(

@@ -53,6 +53,14 @@ const showOverlay = computed(
   () => Boolean(activeDecision.value) && !overlayDismissed.value
 );
 
+//: 决策浮层开着时，地图只照亮出事的地方
+const spotlightRegion = computed(() => {
+  if (showOverlay.value && activeDecision.value?.focus_region) {
+    return activeDecision.value.focus_region;
+  }
+  return selected.value || "";
+});
+
 const tang = computed(() => factions.value.find((f) => f.faction_key === "tang"));
 const allegiance = computed(
   () => relations.value.find((r) => r.from_key === "fanzhen") || null
@@ -334,6 +342,7 @@ onMounted(boot);
         :selected="selected"
         :scale="scope"
         :factions="factions"
+        :focus="spotlightRegion"
         @select="selectRegion"
         @zoom-change="onZoomChange"
       />

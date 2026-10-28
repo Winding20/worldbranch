@@ -35,6 +35,14 @@ COOLDOWN_TICKS = 12
 # --------------------------------------------------------------------------- #
 # 触发
 # --------------------------------------------------------------------------- #
+def _first_region(by_key: dict, keys: tuple[str, ...]) -> str | None:
+    """从候选里挑第一个真实存在的地点，找不到就不聚光。"""
+    for key in keys:
+        if key in by_key:
+            return key
+    return None
+
+
 def _has_recent(
     session: Session, branch_id: int, kind: str, tick: int, key: str | None = None
 ) -> bool:
@@ -92,6 +100,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="warlord_supply",
+                focus_region=_first_region(by_key, ("hebei", "fanyang", "hebei_plain")),
                 title="河北藩镇上表请饷",
                 description=(
                     f"河北藩镇府库已透支 {abs(fanzhen.treasury):,.0f} 贯，"
@@ -144,6 +153,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="famine_relief",
+                focus_region=worst.region_key,
                 title=f"{worst.name}请求赈济",
                 description=(
                     f"{worst.name}粮价指数已达 {worst.price_index:.2f}，"
@@ -192,6 +202,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="cut_warlord",
+                focus_region=_first_region(by_key, ("hebei", "fanyang", "hebei_plain")),
                 title="朝议：是否削藩",
                 description=(
                     f"河北藩镇臣属度已降至 {allegiance.value:.2f}，"
@@ -238,6 +249,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="border_raid",
+                focus_region="longyou",
                 title="吐蕃寇边",
                 description=(
                     "陇右急报：吐蕃骑兵越境掠边，鄯州告急。"
@@ -287,6 +299,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="transport_break",
+                focus_region=_first_region(by_key, ("huainan", "jiangnan", "suiyang")),
                 title="漕运受阻",
                 description=(
                     "江淮粮船滞留，漕运不畅，关内粮价已有抬头的迹象。"
@@ -329,6 +342,7 @@ def raise_decisions(
             _make(
                 branch,
                 kind="warlord_revolt",
+                focus_region=_first_region(by_key, ("hebei", "fanyang", "hebei_plain")),
                 title="河北举兵",
                 description=(
                     f"河北藩镇臣属度已跌至 {allegiance.value:.2f}，粮道断绝、使者不至。"
@@ -422,6 +436,7 @@ def raise_decisions(
                 branch,
                 kind="appoint_commander",
                 ref_key=army.army_key,
+                focus_region=army.region_key or None,
                 title=f"{army.name}无主帅",
                 description=(
                     f"{army.name}主帅{commander.name if commander else '（空缺）'}"
@@ -454,6 +469,7 @@ def raise_decisions(
                 branch,
                 kind="reward_general",
                 ref_key=person.character_key,
+                focus_region=person.location_region_key,
                 title=f"{person.name}拥兵自重",
                 description=(
                     f"{person.name}（{person.office}）统兵在外，忠诚已降至 "
@@ -531,6 +547,7 @@ def _make(
     options: list[dict],
     trigger_event_id: int | None = None,
     ref_key: str | None = None,
+    focus_region: str | None = None,
 ) -> Decision:
     return Decision(
         branch_id=branch.id,
@@ -541,6 +558,7 @@ def _make(
         description=description,
         trigger_event_id=trigger_event_id,
         ref_key=ref_key,
+        focus_region=focus_region,
         options=options,
         status="pending",
     )

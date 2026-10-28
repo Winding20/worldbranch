@@ -633,3 +633,12 @@ select {
   .panel-block { padding: 12px 14px; }
   .army-totals { flex-direction: column; gap: 2px; }
 }
+/* 聚光：金边缓慢呼吸，提示"就是这里" */
+.spotlight-ring {
+  filter: drop-shadow(0 0 10px rgba(216, 162, 74, 0.65));
+  animation: spotlight 2.4s ease-in-out infinite;
+}
+@keyframes spotlight {
+  0%, 100% { stroke-opacity: 0.55; }
+  50% { stroke-opacity: 1; }
+}
