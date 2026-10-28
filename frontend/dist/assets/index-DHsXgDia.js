@@ -1626,9 +1626,9 @@ const _hoisted_8 = {
 };
 const _hoisted_9 = {
   key: 2,
-  class: "layout"
+  class: "stage"
 };
-const _hoisted_10 = { class: "map-panel" };
+const _hoisted_10 = { class: "map-layer" };
 const _hoisted_11 = { class: "map-toolbar" };
 const _hoisted_12 = { class: "scale-group" };
 const _hoisted_13 = ["value"];
@@ -1640,108 +1640,125 @@ const _hoisted_15 = {
   key: 1,
   class: "auto-hint"
 };
-const _hoisted_16 = { class: "side-panel" };
-const _hoisted_17 = {
+const _hoisted_16 = { class: "hud" };
+const _hoisted_17 = { class: "hud-main" };
+const _hoisted_18 = { class: "hud-date" };
+const _hoisted_19 = { class: "hud-role" };
+const _hoisted_20 = { class: "hud-stats" };
+const _hoisted_21 = { key: 0 };
+const _hoisted_22 = { key: 1 };
+const _hoisted_23 = { key: 2 };
+const _hoisted_24 = {
   key: 0,
   class: "panel-block"
 };
-const _hoisted_18 = {
+const _hoisted_25 = {
   key: 1,
   class: "panel-block"
 };
-const _hoisted_19 = { class: "result-card" };
-const _hoisted_20 = { class: "r-title" };
-const _hoisted_21 = {
+const _hoisted_26 = { class: "result-card" };
+const _hoisted_27 = { class: "r-title" };
+const _hoisted_28 = {
   key: 0,
   class: "r-empty"
 };
-const _hoisted_22 = { class: "r-label" };
-const _hoisted_23 = { class: "r-value" };
-const _hoisted_24 = {
+const _hoisted_29 = { class: "r-label" };
+const _hoisted_30 = { class: "r-value" };
+const _hoisted_31 = {
   key: 2,
   class: "panel-block brief"
 };
-const _hoisted_25 = { class: "brief-role" };
-const _hoisted_26 = { class: "brief-goal" };
-const _hoisted_27 = { class: "brief-more" };
-const _hoisted_28 = { class: "brief-text" };
-const _hoisted_29 = { class: "brief-list" };
-const _hoisted_30 = { class: "panel-block" };
-const _hoisted_31 = { class: "advance-row" };
-const _hoisted_32 = ["disabled"];
-const _hoisted_33 = ["disabled"];
-const _hoisted_34 = ["disabled"];
-const _hoisted_35 = { class: "hint" };
-const _hoisted_36 = {
-  key: 0,
-  class: "hint error"
-};
-const _hoisted_37 = { class: "precision-more" };
-const _hoisted_38 = { class: "precision-grid" };
-const _hoisted_39 = ["onClick"];
-const _hoisted_40 = { class: "tab-strip" };
-const _hoisted_41 = ["onClick"];
-const _hoisted_42 = {
+const _hoisted_32 = { class: "brief-role" };
+const _hoisted_33 = { class: "brief-goal" };
+const _hoisted_34 = { class: "brief-more" };
+const _hoisted_35 = { class: "brief-text" };
+const _hoisted_36 = { class: "brief-list" };
+const _hoisted_37 = { class: "tab-strip" };
+const _hoisted_38 = ["onClick"];
+const _hoisted_39 = {
   key: 0,
   class: "count urgent"
 };
-const _hoisted_43 = { class: "panel-block" };
-const _hoisted_44 = {
+const _hoisted_40 = { class: "panel-block" };
+const _hoisted_41 = {
   key: 0,
   class: "count urgent"
 };
-const _hoisted_45 = { class: "panel-block" };
-const _hoisted_46 = { class: "army-totals" };
-const _hoisted_47 = { class: "army-head" };
-const _hoisted_48 = { class: "a-name" };
-const _hoisted_49 = { class: "a-power" };
-const _hoisted_50 = { class: "army-meta" };
+const _hoisted_42 = { class: "panel-block" };
+const _hoisted_43 = { class: "army-totals" };
+const _hoisted_44 = { class: "army-head" };
+const _hoisted_45 = { class: "a-name" };
+const _hoisted_46 = { class: "a-power" };
+const _hoisted_47 = { class: "army-meta" };
+const _hoisted_48 = { class: "army-bars" };
+const _hoisted_49 = { class: "bar" };
+const _hoisted_50 = { class: "bar-label" };
 const _hoisted_51 = { class: "army-bars" };
-const _hoisted_52 = { class: "bar" };
+const _hoisted_52 = { class: "bar supply" };
 const _hoisted_53 = { class: "bar-label" };
-const _hoisted_54 = { class: "army-bars" };
-const _hoisted_55 = { class: "bar supply" };
-const _hoisted_56 = { class: "bar-label" };
-const _hoisted_57 = { class: "panel-block" };
-const _hoisted_58 = { class: "p-head" };
-const _hoisted_59 = { class: "p-name" };
-const _hoisted_60 = { class: "p-status" };
-const _hoisted_61 = { class: "p-meta" };
-const _hoisted_62 = { class: "p-bars" };
-const _hoisted_63 = { class: "bar" };
-const _hoisted_64 = { class: "bar-label" };
-const _hoisted_65 = { class: "panel-block" };
-const _hoisted_66 = {
+const _hoisted_54 = { class: "panel-block" };
+const _hoisted_55 = { class: "p-head" };
+const _hoisted_56 = { class: "p-name" };
+const _hoisted_57 = { class: "p-status" };
+const _hoisted_58 = { class: "p-meta" };
+const _hoisted_59 = { class: "p-bars" };
+const _hoisted_60 = { class: "bar" };
+const _hoisted_61 = { class: "bar-label" };
+const _hoisted_62 = { class: "panel-block" };
+const _hoisted_63 = {
   key: 0,
   class: "hist-group"
 };
-const _hoisted_67 = { class: "hist-title" };
-const _hoisted_68 = { class: "h-title" };
-const _hoisted_69 = { class: "h-note" };
-const _hoisted_70 = { class: "hist-group" };
-const _hoisted_71 = { class: "hist-title" };
-const _hoisted_72 = { class: "h-title" };
-const _hoisted_73 = { class: "h-note" };
-const _hoisted_74 = {
+const _hoisted_64 = { class: "hist-title" };
+const _hoisted_65 = { class: "h-title" };
+const _hoisted_66 = { class: "h-note" };
+const _hoisted_67 = { class: "hist-group" };
+const _hoisted_68 = { class: "hist-title" };
+const _hoisted_69 = { class: "h-title" };
+const _hoisted_70 = { class: "h-note" };
+const _hoisted_71 = {
   key: 3,
   class: "panel-block"
 };
-const _hoisted_75 = { class: "changes" };
-const _hoisted_76 = { class: "c-name" };
-const _hoisted_77 = { class: "panel-block" };
-const _hoisted_78 = {
+const _hoisted_72 = { class: "changes" };
+const _hoisted_73 = { class: "c-name" };
+const _hoisted_74 = { class: "panel-block" };
+const _hoisted_75 = {
   key: 0,
   class: "unit-list"
 };
-const _hoisted_79 = { class: "unit-name" };
-const _hoisted_80 = { class: "unit-meta" };
-const _hoisted_81 = { class: "unit-row" };
-const _hoisted_82 = { class: "unit-row" };
-const _hoisted_83 = { key: 0 };
-const _hoisted_84 = { class: "panel-block grow" };
-const _hoisted_85 = { class: "count" };
+const _hoisted_76 = { class: "unit-name" };
+const _hoisted_77 = { class: "unit-meta" };
+const _hoisted_78 = { class: "unit-row" };
+const _hoisted_79 = { class: "unit-row" };
+const _hoisted_80 = { key: 0 };
+const _hoisted_81 = { class: "panel-block grow" };
+const _hoisted_82 = { class: "count" };
+const _hoisted_83 = { class: "action-bar" };
+const _hoisted_84 = { class: "progress" };
+const _hoisted_85 = { class: "progress-track" };
+const _hoisted_86 = { class: "progress-label" };
+const _hoisted_87 = { class: "advance-group" };
+const _hoisted_88 = ["disabled"];
+const _hoisted_89 = ["disabled"];
+const _hoisted_90 = ["disabled"];
+const _hoisted_91 = {
+  key: 0,
+  class: "count urgent"
+};
+const _hoisted_92 = { class: "action-hint" };
+const _hoisted_93 = {
+  key: 0,
+  class: "action-hint error"
+};
+const _hoisted_94 = {
+  key: 0,
+  class: "decision-overlay"
+};
+const _hoisted_95 = { class: "decision-sheet" };
 
 const WORLD = "tang_755";
+const HORIZON_MONTHS = 99;
 
 const _sfc_main = {
   __name: 'App',
@@ -1779,6 +1796,31 @@ const loyalty = tA([]);
 const historyStatus = tA({ fired: [], diverged: [] });
 //: 右侧分组：决断 / 军事 / 人物 / 史实
 const panel = tA("decide");
+//: 侧栏抽屉（窄屏默认收起，宽屏默认展开）
+const drawerOpen = tA(typeof window !== "undefined" && window.innerWidth >= 1024);
+//: 决策浮层被"稍后再议"收起的标记
+const overlayDismissed = tA(false);
+
+//: 当前要处理的那一件事
+const activeDecision = lq(() => decisions.value[0] || null);
+const showOverlay = lq(
+  () => Boolean(activeDecision.value) && !overlayDismissed.value
+);
+
+const tang = lq(() => factions.value.find((f) => f.faction_key === "tang"));
+const allegiance = lq(
+  () => relations.value.find((r) => r.from_key === "fanzhen") || null
+);
+
+//: 这盘棋的终点是广德元年（764），共 99 个月
+const progressPct = lq(() => {
+  const done = branch.value ? branch.value.tick_index : 0;
+  return Math.min(100, Math.round((done / HORIZON_MONTHS) * 100));
+});
+const monthsLeft = lq(() => {
+  const done = branch.value ? branch.value.tick_index : 0;
+  return Math.max(0, HORIZON_MONTHS - done);
+});
 //: 官职的显示名。数字与代码留在数据里，界面只给人读的字。
 const RANK_LABELS = { 1: "一品", 2: "二品", 3: "三品", 4: "四品", 5: "五品" };
 const KIND_LABELS = {
@@ -1850,8 +1892,11 @@ async function ensureBranch() {
 
 async function loadDecisions() {
   if (!branch.value) return;
+  const before = decisions.value.length;
   decisions.value = await api.decisions(branch.value.id);
   relations.value = await api.relations(branch.value.id);
+  // 有新的事找上门，就重新把浮层推到你面前
+  if (decisions.value.length !== before) overlayDismissed.value = false;
 }
 
 async function loadCourt() {
@@ -1941,12 +1986,9 @@ async function onResolve(decision, option) {
     message.value = `决断失败：${err.message}`;
   } finally {
     busy.value = false;
+    // 处理完一件，若有下一件，浮层应当自己再出现
+    overlayDismissed.value = false;
   }
-}
-
-async function setPrecision(key) {
-  precision.value = key;
-  message.value = `下次推进将使用「${PRECISIONS.find((p) => p.key === key).name}」；精度对整个世界统一生效。`;
 }
 
 async function onAct(action, r) {
@@ -1980,7 +2022,7 @@ rw(boot);
 return (_ctx, _cache) => {
   return (ln(), lo(i8, null, [
     lf("header", _hoisted_1, [
-      _cache[13] || (_cache[13] = lf("div", { class: "brand" }, [
+      _cache[15] || (_cache[15] = lf("div", { class: "brand" }, [
         lf("span", { class: "brand-mark" }, "WB"),
         lf("div", null, [
           lf("h1", null, "WorldBranch"),
@@ -2004,19 +2046,19 @@ return (_ctx, _cache) => {
               }, "AI 分析", 2)
             ]),
             lf("span", _hoisted_4, [
-              _cache[8] || (_cache[8] = lv("时间 ", -1)),
+              _cache[10] || (_cache[10] = lv("时间 ", -1)),
               lf("b", null, eh(branch.value.current_date), 1)
             ]),
             lf("span", _hoisted_5, [
-              _cache[9] || (_cache[9] = lv("精度 ", -1)),
+              _cache[11] || (_cache[11] = lv("精度 ", -1)),
               lf("b", null, eh(PRECISIONS.find((p) => p.key === branch.value.precision)?.name), 1)
             ]),
             lf("span", _hoisted_6, [
-              _cache[10] || (_cache[10] = lv("已推进 ", -1)),
+              _cache[12] || (_cache[12] = lv("已推进 ", -1)),
               lf("b", null, eh(branch.value.tick_index), 1),
-              _cache[11] || (_cache[11] = lv(" 月", -1))
+              _cache[13] || (_cache[13] = lv(" 月", -1))
             ]),
-            _cache[12] || (_cache[12] = lf("a", {
+            _cache[14] || (_cache[14] = lf("a", {
               class: "chip link",
               href: "/legacy"
             }, "旧版界面", -1))
@@ -2041,12 +2083,12 @@ return (_ctx, _cache) => {
             lf("section", _hoisted_10, [
               lf("div", _hoisted_11, [
                 lf("div", _hoisted_12, [
-                  _cache[16] || (_cache[16] = lf("label", { for: "scope" }, "观察尺度", -1)),
+                  _cache[18] || (_cache[18] = lf("label", { for: "scope" }, "观察尺度", -1)),
                   lf("select", {
                     id: "scope",
                     value: scope.value,
                     onChange: _cache[3] || (_cache[3] = $event => (onScopeSelect($event.target.value)))
-                  }, [...(_cache[14] || (_cache[14] = [
+                  }, [...(_cache[16] || (_cache[16] = [
                     lf("option", { value: "world" }, "世界级", -1),
                     lf("option", { value: "nation" }, "国家级", -1),
                     lf("option", { value: "region" }, "地区级", -1),
@@ -2054,7 +2096,7 @@ return (_ctx, _cache) => {
                   ]))], 40, _hoisted_13),
                   (manualScope.value)
                     ? (ln(), lo("span", _hoisted_14, [
-                        _cache[15] || (_cache[15] = lv(" 手动模式 ", -1)),
+                        _cache[17] || (_cache[17] = lv(" 手动模式 ", -1)),
                         lf("button", {
                           class: "link-btn",
                           onClick: backToAuto
@@ -2062,7 +2104,7 @@ return (_ctx, _cache) => {
                       ]))
                     : (ln(), lo("span", _hoisted_15, "跟随缩放自动切换"))
                 ]),
-                _cache[17] || (_cache[17] = lf("div", { class: "legend" }, [
+                _cache[19] || (_cache[19] = lf("div", { class: "legend" }, [
                   lf("span", null, [
                     lf("i", { style: {"background":"#5a7a96"} }),
                     lv("道界")
@@ -2086,28 +2128,57 @@ return (_ctx, _cache) => {
                 onZoomChange: onZoomChange
               }, null, 8, ["regions", "selected", "scale", "factions"])
             ]),
-            lf("aside", _hoisted_16, [
+            lf("header", _hoisted_16, [
+              lf("div", _hoisted_17, [
+                lf("span", _hoisted_18, eh(branch.value ? branch.value.current_date : ""), 1),
+                lf("span", _hoisted_19, eh(scenario.value ? scenario.value.role : ""), 1)
+              ]),
+              lf("div", _hoisted_20, [
+                (tang.value)
+                  ? (ln(), lo("span", _hoisted_21, [
+                      _cache[20] || (_cache[20] = lv("府库 ", -1)),
+                      lf("b", null, eh(Math.round(tang.value.treasury).toLocaleString()), 1)
+                    ]))
+                  : l_("", true),
+                (allegiance.value)
+                  ? (ln(), lo("span", _hoisted_22, [
+                      _cache[21] || (_cache[21] = lv(" 河北 ", -1)),
+                      lf("b", null, eh(allegiance.value.value.toFixed(2)), 1),
+                      lv(" " + eh(allegiance.value.label), 1)
+                    ]))
+                  : l_("", true),
+                (ending.value)
+                  ? (ln(), lo("span", _hoisted_23, [
+                      _cache[22] || (_cache[22] = lv("结局 ", -1)),
+                      lf("b", null, eh(ending.value.grade), 1)
+                    ]))
+                  : l_("", true)
+              ])
+            ]),
+            lf("aside", {
+              class: Y(["side-panel", { open: drawerOpen.value }])
+            }, [
               (ending.value)
-                ? (ln(), lo("div", _hoisted_17, [
-                    _cache[18] || (_cache[18] = lf("h2", null, "五年之后", -1)),
+                ? (ln(), lo("div", _hoisted_24, [
+                    _cache[23] || (_cache[23] = lf("h2", null, "五年之后", -1)),
                     lg(EndingCard, { ending: ending.value }, null, 8, ["ending"])
                   ]))
                 : l_("", true),
               (decisionResult.value)
-                ? (ln(), lo("div", _hoisted_18, [
-                    _cache[19] || (_cache[19] = lf("h2", null, "刚才的决断", -1)),
-                    lf("div", _hoisted_19, [
-                      lf("div", _hoisted_20, eh(decisionResult.value.title) + " → " + eh(decisionResult.value.option), 1),
+                ? (ln(), lo("div", _hoisted_25, [
+                    _cache[24] || (_cache[24] = lf("h2", null, "刚才的决断", -1)),
+                    lf("div", _hoisted_26, [
+                      lf("div", _hoisted_27, eh(decisionResult.value.title) + " → " + eh(decisionResult.value.option), 1),
                       (!decisionResult.value.applied.length)
-                        ? (ln(), lo("div", _hoisted_21, "这次选择没有立刻改变可量化的指标。"))
+                        ? (ln(), lo("div", _hoisted_28, "这次选择没有立刻改变可量化的指标。"))
                         : l_("", true),
                       (ln(true), lo(i8, null, rU(decisionResult.value.applied, (item) => {
                         return (ln(), lo("div", {
                           key: item.label,
                           class: "r-row"
                         }, [
-                          lf("span", _hoisted_22, eh(item.label), 1),
-                          lf("span", _hoisted_23, [
+                          lf("span", _hoisted_29, eh(item.label), 1),
+                          lf("span", _hoisted_30, [
                             lv(eh(Number(item.before).toLocaleString()) + " → ", 1),
                             lf("b", {
                               class: Y(item.after < item.before ? 'down' : item.after > item.before ? 'up' : '')
@@ -2124,13 +2195,13 @@ return (_ctx, _cache) => {
                   ]))
                 : l_("", true),
               (scenario.value)
-                ? (ln(), lo("div", _hoisted_24, [
-                    lf("div", _hoisted_25, eh(scenario.value.role), 1),
-                    lf("p", _hoisted_26, eh(scenario.value.goal), 1),
-                    lf("details", _hoisted_27, [
-                      _cache[20] || (_cache[20] = lf("summary", null, "当前局面", -1)),
-                      lf("p", _hoisted_28, eh(scenario.value.briefing), 1),
-                      lf("ul", _hoisted_29, [
+                ? (ln(), lo("div", _hoisted_31, [
+                    lf("div", _hoisted_32, eh(scenario.value.role), 1),
+                    lf("p", _hoisted_33, eh(scenario.value.goal), 1),
+                    lf("details", _hoisted_34, [
+                      _cache[25] || (_cache[25] = lf("summary", null, "当前局面", -1)),
+                      lf("p", _hoisted_35, eh(scenario.value.briefing), 1),
+                      lf("ul", _hoisted_36, [
                         (ln(true), lo(i8, null, rU(scenario.value.pressures, (p) => {
                           return (ln(), lo("li", { key: p }, eh(p), 1))
                         }), 128))
@@ -2138,46 +2209,7 @@ return (_ctx, _cache) => {
                     ])
                   ]))
                 : l_("", true),
-              lf("div", _hoisted_30, [
-                _cache[21] || (_cache[21] = lf("h2", null, "推进时间", -1)),
-                lf("div", _hoisted_31, [
-                  lf("button", {
-                    class: "advance",
-                    disabled: busy.value,
-                    onClick: _cache[5] || (_cache[5] = $event => (advance(1)))
-                  }, "推进 1 月", 8, _hoisted_32),
-                  lf("button", {
-                    class: "advance",
-                    disabled: busy.value,
-                    onClick: _cache[6] || (_cache[6] = $event => (advance(3)))
-                  }, "推进 3 月", 8, _hoisted_33),
-                  lf("button", {
-                    class: "advance",
-                    disabled: busy.value,
-                    onClick: _cache[7] || (_cache[7] = $event => (advance(12)))
-                  }, "推进 12 月", 8, _hoisted_34)
-                ]),
-                lf("p", _hoisted_35, eh(message.value), 1),
-                (error.value)
-                  ? (ln(), lo("p", _hoisted_36, eh(error.value), 1))
-                  : l_("", true),
-                lf("details", _hoisted_37, [
-                  lf("summary", null, "模拟精度：" + eh(PRECISIONS.find((p) => p.key === precision.value)?.name), 1),
-                  lf("div", _hoisted_38, [
-                    (ln(), lo(i8, null, rU(PRECISIONS, (p) => {
-                      return lf("button", {
-                        key: p.key,
-                        class: Y({ active: precision.value === p.key }),
-                        onClick: $event => (setPrecision(p.key))
-                      }, [
-                        lf("b", null, eh(p.name), 1),
-                        lf("span", null, eh(p.desc), 1)
-                      ], 10, _hoisted_39)
-                    }), 64))
-                  ])
-                ])
-              ]),
-              lf("div", _hoisted_40, [
+              lf("div", _hoisted_37, [
                 (ln(true), lo(i8, null, rU([
             { key: 'decide', name: '决断', badge: decisions.value.length },
             { key: 'war', name: '军事', badge: 0 },
@@ -2191,16 +2223,16 @@ return (_ctx, _cache) => {
                   }, [
                     lv(eh(tab.name) + " ", 1),
                     (tab.badge)
-                      ? (ln(), lo("span", _hoisted_42, eh(tab.badge), 1))
+                      ? (ln(), lo("span", _hoisted_39, eh(tab.badge), 1))
                       : l_("", true)
-                  ], 10, _hoisted_41))
+                  ], 10, _hoisted_38))
                 }), 128))
               ]),
-              nf(lf("div", _hoisted_43, [
+              nf(lf("div", _hoisted_40, [
                 lf("h2", null, [
-                  _cache[22] || (_cache[22] = lv(" 待决事项 ", -1)),
+                  _cache[26] || (_cache[26] = lv(" 待决事项 ", -1)),
                   (decisions.value.length)
-                    ? (ln(), lo("span", _hoisted_44, eh(decisions.value.length), 1))
+                    ? (ln(), lo("span", _hoisted_41, eh(decisions.value.length), 1))
                     : l_("", true)
                 ]),
                 lg(DecisionPanel, {
@@ -2212,9 +2244,9 @@ return (_ctx, _cache) => {
               ], 512), [
                 [sb, panel.value === 'decide']
               ]),
-              nf(lf("div", _hoisted_45, [
-                _cache[23] || (_cache[23] = lf("h2", null, "各军", -1)),
-                lf("div", _hoisted_46, [
+              nf(lf("div", _hoisted_42, [
+                _cache[27] || (_cache[27] = lf("h2", null, "各军", -1)),
+                lf("div", _hoisted_43, [
                   lf("span", null, "唐军 " + eh(Math.round(armies.value.tang_total).toLocaleString()), 1),
                   lf("span", null, "燕军 " + eh(Math.round(armies.value.yan_total).toLocaleString()), 1)
                 ]),
@@ -2223,83 +2255,83 @@ return (_ctx, _cache) => {
                     key: a.army_key,
                     class: "army"
                   }, [
-                    lf("div", _hoisted_47, [
-                      lf("span", _hoisted_48, eh(a.name), 1),
-                      lf("span", _hoisted_49, eh(Math.round(a.power).toLocaleString()), 1)
+                    lf("div", _hoisted_44, [
+                      lf("span", _hoisted_45, eh(a.name), 1),
+                      lf("span", _hoisted_46, eh(Math.round(a.power).toLocaleString()), 1)
                     ]),
-                    lf("div", _hoisted_50, eh(a.commander_name) + " · 兵 " + eh(a.troops.toLocaleString()), 1),
-                    lf("div", _hoisted_51, [
-                      lf("span", _hoisted_52, [
+                    lf("div", _hoisted_47, eh(a.commander_name) + " · 兵 " + eh(a.troops.toLocaleString()), 1),
+                    lf("div", _hoisted_48, [
+                      lf("span", _hoisted_49, [
                         lf("i", {
                           style: J({ width: a.morale * 100 + '%' })
                         }, null, 4)
                       ]),
-                      lf("span", _hoisted_53, "士气 " + eh(a.morale.toFixed(2)), 1)
+                      lf("span", _hoisted_50, "士气 " + eh(a.morale.toFixed(2)), 1)
                     ]),
-                    lf("div", _hoisted_54, [
-                      lf("span", _hoisted_55, [
+                    lf("div", _hoisted_51, [
+                      lf("span", _hoisted_52, [
                         lf("i", {
                           style: J({ width: a.supply * 100 + '%' })
                         }, null, 4)
                       ]),
-                      lf("span", _hoisted_56, "补给 " + eh(a.supply.toFixed(2)), 1)
+                      lf("span", _hoisted_53, "补给 " + eh(a.supply.toFixed(2)), 1)
                     ])
                   ]))
                 }), 128))
               ], 512), [
                 [sb, panel.value === 'war']
               ]),
-              nf(lf("div", _hoisted_57, [
-                _cache[24] || (_cache[24] = lf("h2", null, "人物", -1)),
+              nf(lf("div", _hoisted_54, [
+                _cache[28] || (_cache[28] = lf("h2", null, "人物", -1)),
                 (ln(true), lo(i8, null, rU(loyalty.value, (p) => {
                   return (ln(), lo("div", {
                     key: p.key,
                     class: Y(["person", p.status])
                   }, [
-                    lf("div", _hoisted_58, [
-                      lf("span", _hoisted_59, eh(p.name), 1),
-                      lf("span", _hoisted_60, eh(p.status), 1)
+                    lf("div", _hoisted_55, [
+                      lf("span", _hoisted_56, eh(p.name), 1),
+                      lf("span", _hoisted_57, eh(p.status), 1)
                     ]),
-                    lf("div", _hoisted_61, eh(p.office || "无官职") + "（" + eh(RANK_LABELS[p.office_rank] || p.office_rank + " 品") + "·" + eh(KIND_LABELS[p.office_kind] || p.office_kind) + "） · 统兵 " + eh(p.troops.toLocaleString()), 1),
-                    lf("div", _hoisted_62, [
-                      lf("span", _hoisted_63, [
+                    lf("div", _hoisted_58, eh(p.office || "无官职") + "（" + eh(RANK_LABELS[p.office_rank] || p.office_rank + " 品") + "·" + eh(KIND_LABELS[p.office_kind] || p.office_kind) + "） · 统兵 " + eh(p.troops.toLocaleString()), 1),
+                    lf("div", _hoisted_59, [
+                      lf("span", _hoisted_60, [
                         lf("i", {
                           style: J({ width: p.loyalty * 100 + '%' })
                         }, null, 4)
                       ]),
-                      lf("span", _hoisted_64, "忠 " + eh(p.loyalty.toFixed(2)), 1)
+                      lf("span", _hoisted_61, "忠 " + eh(p.loyalty.toFixed(2)), 1)
                     ])
                   ], 2))
                 }), 128))
               ], 512), [
                 [sb, panel.value === 'people']
               ]),
-              nf(lf("div", _hoisted_65, [
-                _cache[25] || (_cache[25] = lf("h2", null, "史实对照", -1)),
-                _cache[26] || (_cache[26] = lf("p", { class: "hint" }, "按史载发生的记为「应验」；因前提改变而没有发生的记为「改道」。", -1)),
+              nf(lf("div", _hoisted_62, [
+                _cache[29] || (_cache[29] = lf("h2", null, "史实对照", -1)),
+                _cache[30] || (_cache[30] = lf("p", { class: "hint" }, "按史载发生的记为「应验」；因前提改变而没有发生的记为「改道」。", -1)),
                 (historyStatus.value.diverged.length)
-                  ? (ln(), lo("div", _hoisted_66, [
-                      lf("div", _hoisted_67, "改道 " + eh(historyStatus.value.diverged.length), 1),
+                  ? (ln(), lo("div", _hoisted_63, [
+                      lf("div", _hoisted_64, "改道 " + eh(historyStatus.value.diverged.length), 1),
                       (ln(true), lo(i8, null, rU(historyStatus.value.diverged, (h) => {
                         return (ln(), lo("div", {
                           key: h.key,
                           class: "hist-row diverged"
                         }, [
-                          lf("span", _hoisted_68, eh(h.title), 1),
-                          lf("span", _hoisted_69, eh(h.date) + " · " + eh(h.reason), 1)
+                          lf("span", _hoisted_65, eh(h.title), 1),
+                          lf("span", _hoisted_66, eh(h.date) + " · " + eh(h.reason), 1)
                         ]))
                       }), 128))
                     ]))
                   : l_("", true),
-                lf("div", _hoisted_70, [
-                  lf("div", _hoisted_71, "应验 " + eh(historyStatus.value.fired.length), 1),
+                lf("div", _hoisted_67, [
+                  lf("div", _hoisted_68, "应验 " + eh(historyStatus.value.fired.length), 1),
                   (ln(true), lo(i8, null, rU(historyStatus.value.fired, (h) => {
                     return (ln(), lo("div", {
                       key: h.key,
                       class: "hist-row"
                     }, [
-                      lf("span", _hoisted_72, eh(h.title), 1),
-                      lf("span", _hoisted_73, eh(h.date), 1)
+                      lf("span", _hoisted_69, eh(h.title), 1),
+                      lf("span", _hoisted_70, eh(h.date), 1)
                     ]))
                   }), 128))
                 ])
@@ -2307,15 +2339,15 @@ return (_ctx, _cache) => {
                 [sb, panel.value === 'history']
               ]),
               (changes.value.length)
-                ? (ln(), lo("div", _hoisted_74, [
-                    _cache[27] || (_cache[27] = lf("h2", null, "本期变化", -1)),
-                    lf("div", _hoisted_75, [
+                ? (ln(), lo("div", _hoisted_71, [
+                    _cache[31] || (_cache[31] = lf("h2", null, "本期变化", -1)),
+                    lf("div", _hoisted_72, [
                       (ln(true), lo(i8, null, rU(changes.value, (c) => {
                         return (ln(), lo("div", {
                           key: c.region_key,
                           class: "change-row"
                         }, [
-                          lf("span", _hoisted_76, eh(c.name), 1),
+                          lf("span", _hoisted_73, eh(c.name), 1),
                           lf("span", {
                             class: Y(["c-item", c.price_delta > 0 ? 'up' : 'down'])
                           }, " 粮价 " + eh(c.price_before.toFixed(2)) + " → " + eh(c.price_after.toFixed(2)), 3),
@@ -2330,30 +2362,30 @@ return (_ctx, _cache) => {
                     ])
                   ]))
                 : l_("", true),
-              lf("div", _hoisted_77, [
+              lf("div", _hoisted_74, [
                 lf("h2", null, eh(macro.value ? "势力概览" : "地区详情"), 1),
                 (macro.value)
-                  ? (ln(), lo("div", _hoisted_78, [
+                  ? (ln(), lo("div", _hoisted_75, [
                       (ln(true), lo(i8, null, rU(units.value, (u) => {
                         return (ln(), lo("div", {
                           key: u.key,
                           class: "unit"
                         }, [
-                          lf("div", _hoisted_79, eh(u.name), 1),
-                          lf("div", _hoisted_80, eh(u.metrics.region_count) + " 道 · 人口 " + eh(Math.round(u.metrics.population).toLocaleString()), 1),
-                          lf("div", _hoisted_81, [
+                          lf("div", _hoisted_76, eh(u.name), 1),
+                          lf("div", _hoisted_77, eh(u.metrics.region_count) + " 道 · 人口 " + eh(Math.round(u.metrics.population).toLocaleString()), 1),
+                          lf("div", _hoisted_78, [
                             lf("span", null, "存粮 " + eh(Math.round(u.metrics.grain_stock).toLocaleString()) + " 石", 1),
                             lf("span", null, "粮价 " + eh(u.metrics.price_index.toFixed(2)), 1)
                           ]),
-                          lf("div", _hoisted_82, [
+                          lf("div", _hoisted_79, [
                             lf("span", null, "民变峰值 " + eh(u.metrics.unrest_max.toFixed(2)), 1),
                             (u.metrics.treasury != null)
-                              ? (ln(), lo("span", _hoisted_83, "府库 " + eh(Math.round(u.metrics.treasury).toLocaleString()), 1))
+                              ? (ln(), lo("span", _hoisted_80, "府库 " + eh(Math.round(u.metrics.treasury).toLocaleString()), 1))
                               : l_("", true)
                           ])
                         ]))
                       }), 128)),
-                      _cache[28] || (_cache[28] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
+                      _cache[32] || (_cache[32] = lf("p", { class: "hint" }, "宏观视角按势力聚合，缩放地图可自动切换尺度。", -1))
                     ]))
                   : (ln(), la(RegionDetail, {
                       key: 1,
@@ -2361,10 +2393,10 @@ return (_ctx, _cache) => {
                       onAct: onAct
                     }, null, 8, ["region"]))
               ]),
-              lf("div", _hoisted_84, [
+              lf("div", _hoisted_81, [
                 lf("h2", null, [
-                  _cache[29] || (_cache[29] = lv("事件流 ", -1)),
-                  lf("span", _hoisted_85, eh(events.value.length), 1)
+                  _cache[33] || (_cache[33] = lv("事件流 ", -1)),
+                  lf("span", _hoisted_82, eh(events.value.length), 1)
                 ]),
                 lg(EventFeed, {
                   "branch-id": branch.value ? branch.value.id : null,
@@ -2373,7 +2405,67 @@ return (_ctx, _cache) => {
                   onSelectRegion: selectRegion
                 }, null, 8, ["branch-id", "events", "scope"])
               ])
-            ])
+            ], 2),
+            lf("footer", _hoisted_83, [
+              lf("div", _hoisted_84, [
+                lf("div", _hoisted_85, [
+                  lf("i", {
+                    style: J({ width: progressPct.value + '%' })
+                  }, null, 4)
+                ]),
+                lf("span", _hoisted_86, " 距广德元年还有 " + eh(monthsLeft.value) + " 月 ", 1)
+              ]),
+              lf("div", _hoisted_87, [
+                lf("button", {
+                  class: "advance",
+                  disabled: busy.value,
+                  onClick: _cache[5] || (_cache[5] = $event => (advance(1)))
+                }, "1 月", 8, _hoisted_88),
+                lf("button", {
+                  class: "advance",
+                  disabled: busy.value,
+                  onClick: _cache[6] || (_cache[6] = $event => (advance(3)))
+                }, "3 月", 8, _hoisted_89),
+                lf("button", {
+                  class: "advance primary",
+                  disabled: busy.value,
+                  onClick: _cache[7] || (_cache[7] = $event => (advance(12)))
+                }, "1 年", 8, _hoisted_90),
+                lf("button", {
+                  class: "drawer-toggle",
+                  onClick: _cache[8] || (_cache[8] = $event => (drawerOpen.value = !drawerOpen.value))
+                }, [
+                  lv(eh(drawerOpen.value ? "收起" : "朝局") + " ", 1),
+                  (decisions.value.length)
+                    ? (ln(), lo("span", _hoisted_91, eh(decisions.value.length), 1))
+                    : l_("", true)
+                ])
+              ]),
+              lf("p", _hoisted_92, eh(message.value), 1),
+              (error.value)
+                ? (ln(), lo("p", _hoisted_93, eh(error.value), 1))
+                : l_("", true)
+            ]),
+            (showOverlay.value)
+              ? (ln(), lo("div", _hoisted_94, [
+                  lf("div", _hoisted_95, [
+                    _cache[34] || (_cache[34] = lf("div", { class: "sheet-head" }, [
+                      lf("span", null, "奏"),
+                      lf("em", null, "决断之后本月即结算")
+                    ], -1)),
+                    lg(DecisionPanel, {
+                      decisions: [activeDecision.value],
+                      relations: relations.value,
+                      busy: busy.value,
+                      onResolve: onResolve
+                    }, null, 8, ["decisions", "relations", "busy"]),
+                    lf("button", {
+                      class: "link-btn sheet-later",
+                      onClick: _cache[9] || (_cache[9] = $event => (overlayDismissed.value = true))
+                    }, " 稍后再议 ")
+                  ])
+                ]))
+              : l_("", true)
           ]))
   ], 64))
 }

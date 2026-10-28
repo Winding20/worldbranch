@@ -79,10 +79,14 @@ const checks = {
   "地区标签 7 个": regionLabelsAtStart.length >= 7,
   "出现地区名": /关内道|河南道|河北道|京兆|潼关/.test(body),
   "事件流已渲染": body.includes("事件流"),
-  "出现推进按钮": body.includes("推进 1 月"),
+  "出现推进按钮": /1 年/.test(body) && Boolean(window.document.querySelector(".advance-group")),
   "出现开局情境": /唐廷 · 天宝十四载/.test(body),
   "出现待决事项面板": body.includes("待决事项"),
   "出现分页标签": body.includes("军事") && body.includes("人物") && body.includes("史实"),
+  "顶部 HUD 有日期": Boolean(window.document.querySelector(".hud .hud-date")),
+  "底部动作条有推进": /1 年/.test(body),
+  "有进度条": Boolean(window.document.querySelector(".progress-track")),
+  "有抽屉开关": Boolean(window.document.querySelector(".drawer-toggle")),
   "无运行时错误": errors.length === 0,
 };
 
@@ -120,9 +124,9 @@ async function clickButton(text) {
 }
 
 console.log("\n【朝议】");
-for (let i = 0; i < 4; i += 1) {
-  await clickButton("推进 12 月");
-  await wait(1200);
+for (let i = 0; i < 5; i += 1) {
+  await clickButton("1 年");
+  await wait(1500);
   const cards = window.document.querySelectorAll(".decision-card");
   if (cards.length) break;
 }
@@ -135,6 +139,42 @@ const adviceChecks = {
   "有依据": /才略/.test(decideHtml || ""),
 };
 for (const [n, ok] of Object.entries(adviceChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
+
+// ---- 决策浮层：整屏只剩这一件事 ----
+console.log("\n【决策浮层】");
+const overlay = window.document.querySelector(".decision-overlay");
+const sheet = window.document.querySelector(".decision-sheet");
+const overlayChecks = {
+  "推进后弹出浮层": Boolean(overlay),
+  "浮层里有奏疏卡": Boolean(sheet),
+  "浮层里有选项按钮": (sheet?.querySelectorAll(".d-option").length || 0) > 0,
+  "浮层里有朝议": /朝议/.test(sheet?.innerHTML || ""),
+};
+for (const [n, ok] of Object.entries(overlayChecks)) {
+  console.log(`${ok ? "✓" : "✗"} ${n}`);
+  if (!ok) failed += 1;
+}
+
+// 稍后再议 -> 浮层收起，但事还在抽屉里
+if (sheet) {
+  const later = [...sheet.querySelectorAll("button")].find(
+    (b) => b.textContent.trim() === "稍后再议"
+  );
+  if (later) {
+    later.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await wait(400);
+  }
+}
+const afterLater = window.document.querySelector(".decision-overlay");
+const drawerAfter = window.document.querySelectorAll(".decision-card").length;
+const laterChecks = {
+  "稍后再议可收起浮层": afterLater === null,
+  "收起后事仍在抽屉里": drawerAfter > 0,
+};
+for (const [n, ok] of Object.entries(laterChecks)) {
   console.log(`${ok ? "✓" : "✗"} ${n}`);
   if (!ok) failed += 1;
 }

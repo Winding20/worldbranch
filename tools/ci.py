@@ -1,4 +1,4 @@
-"""WorldBranch CI：一条命令跑完全部检查。
+﻿"""WorldBranch CI：一条命令跑完全部检查。
 
 本地与 GitHub Actions 共用这一份实现，避免两套脚本走偏。
 
@@ -138,10 +138,15 @@ def main() -> int:
             return fail("服务未在 40 秒内就绪")
         print("    服务已就绪", flush=True)
 
-        say("渲染冒烟")
+        say("渲染冒烟（桌面）")
         code = run([node_bin(), "smoke.mjs", url], FRONTEND, env)
         if code != 0:
-            return fail("渲染冒烟")
+            return fail("渲染冒烟（桌面）")
+
+        say("渲染冒烟（窄屏）")
+        code = run([node_bin(), "smoke-mobile.mjs", url], FRONTEND, env)
+        if code != 0:
+            return fail("渲染冒烟（窄屏）")
     finally:
         if server.poll() is None:
             server.terminate()

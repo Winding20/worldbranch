@@ -713,18 +713,35 @@ html, body {
 .hist-row.diverged .h-title { color: #d8a24a; }
 .hist-row.diverged .h-note { color: #c98f5a; }
 
-.layout {
+/* ============================ 舞台 ============================ */
+/* 地图是背景，浮在上面的是 HUD、动作条、抽屉与决策浮层。 */
+.stage {
+  position: relative;
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
   min-height: 0;
+  overflow: hidden;
 }
 
-.map-panel {
+.map-layer {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-right: 1px solid var(--line);
+}
+
+/* 顶部工具条改成浮在地图上的窄条 */
+.map-layer .map-toolbar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(17, 23, 29, 0.82);
+  backdrop-filter: blur(6px);
 }
 
 .map-toolbar {
@@ -754,13 +771,164 @@ select {
   margin-right: 5px; vertical-align: -1px;
 }
 
+/* ============================ 顶部 HUD ============================ */
+.hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 20px;
+  pointer-events: none; /* 不挡地图的拖拽与缩放 */
+  background: linear-gradient(180deg, rgba(10, 14, 18, 0.75), transparent);
+}
+.hud-date { font-size: 20px; letter-spacing: 2px; color: var(--text); }
+.hud-role {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--danger);
+  letter-spacing: 2px;
+}
+.hud-stats {
+  display: flex;
+  gap: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: right;
+}
+.hud-stats b { color: var(--accent-2); font-weight: 600; margin: 0 2px; }
+
+/* ============================ 底部动作条 ============================ */
+.action-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px 14px;
+  background: linear-gradient(0deg, rgba(10, 14, 18, 0.92), rgba(10, 14, 18, 0.45));
+  border-top: 1px solid rgba(42, 53, 64, 0.7);
+}
+.progress { flex: 1; min-width: 120px; }
+.progress-track {
+  height: 3px;
+  background: rgba(42, 53, 64, 0.9);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.4s ease;
+}
+.progress-label {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.advance-group { display: flex; gap: 8px; align-items: center; }
+.advance-group .advance {
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(29, 38, 47, 0.9);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.advance-group .advance:hover:not(:disabled) { border-color: var(--accent); }
+.advance-group .advance:disabled { opacity: 0.5; cursor: progress; }
+.advance-group .advance.primary {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+.drawer-toggle {
+  position: relative;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(29, 38, 47, 0.9);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.drawer-toggle .count { position: absolute; top: -6px; right: -6px; }
+.action-hint {
+  position: absolute;
+  top: -22px;
+  left: 20px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.action-hint.error { color: var(--danger); }
+
+/* ============================ 侧栏抽屉 ============================ */
 .side-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 56px;
+  z-index: 8;
+  width: 380px;
   display: flex;
   flex-direction: column;
   gap: 1px;
   background: var(--line);
-  min-height: 0;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.45);
 }
+.side-panel.open { transform: none; }
+
+/* ============================ 决策浮层 ============================ */
+.decision-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 11, 14, 0.72);
+  backdrop-filter: blur(2px);
+  animation: fade-in 0.18s ease;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.decision-sheet {
+  width: min(640px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 22px 24px 18px;
+  border: 1px solid rgba(216, 162, 74, 0.55);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #202a33, #171f26);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.6);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sheet-head span {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 6px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+.sheet-head em { font-style: normal; font-size: 11px; color: var(--muted); }
+.sheet-later { margin-top: 10px; }
 
 .panel-block { background: var(--panel); padding: 14px 16px; overflow: auto; }
 .panel-block.grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -822,8 +990,71 @@ select {
 .hint { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 .hint.error { color: var(--danger); }
 
-@media (max-width: 1000px) {
-  .layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .side-panel { max-height: 45vh; }
-  .map-panel { border-right: none; }
+/* ============================ 平板 ============================ */
+@media (max-width: 1023px) {
+  .side-panel { width: 340px; }
+  .hud-stats { gap: 12px; font-size: 11.5px; }
+  .action-hint { display: none; }
+}
+
+/* ============================ 手机 ============================ */
+@media (max-width: 767px) {
+  html, body { font-size: 13px; }
+
+  /* 抽屉改成从底部升起的面板，占大半屏 */
+  .side-panel {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 72vh;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+    box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.5);
+  }
+  .side-panel.open { transform: none; }
+
+  .hud { padding: 10px 14px; }
+  .hud-date { font-size: 15px; letter-spacing: 1px; }
+  .hud-role { font-size: 10.5px; }
+  .hud-stats { flex-direction: column; gap: 2px; font-size: 10.5px; }
+
+  .map-layer .map-toolbar {
+    top: auto;
+    bottom: 78px;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  .map-layer .legend { display: none; }
+
+  .action-bar {
+    padding: 8px 12px 10px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .progress { order: 1; flex-basis: 100%; }
+  .progress-label { margin-top: 4px; font-size: 10px; }
+  .advance-group { order: 2; flex: 1; justify-content: space-between; }
+  .advance-group .advance { padding: 8px 12px; font-size: 12px; }
+  .drawer-toggle { padding: 8px 12px; font-size: 12px; }
+
+  /* 决策浮层：手机上铺满整屏 */
+  .decision-overlay { padding: 0; place-items: stretch; }
+  .decision-sheet {
+    width: auto;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+    padding: 16px 16px 22px;
+  }
+  .decision-sheet .d-title { font-size: 17px; }
+  .decision-sheet .d-desc { font-size: 12.5px; }
+  .decision-sheet .d-option { padding: 11px 12px; }
+  .decision-sheet .opt-label { font-size: 14px; }
+
+  /* 群里其它面板在窄屏下不要挤压 */
+  .panel-block { padding: 12px 14px; }
+  .army-totals { flex-direction: column; gap: 2px; }
 }

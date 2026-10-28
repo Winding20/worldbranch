@@ -42,6 +42,32 @@ const loyalty = ref([]);
 const historyStatus = ref({ fired: [], diverged: [] });
 //: 右侧分组：决断 / 军事 / 人物 / 史实
 const panel = ref("decide");
+//: 侧栏抽屉（窄屏默认收起，宽屏默认展开）
+const drawerOpen = ref(typeof window !== "undefined" && window.innerWidth >= 1024);
+//: 决策浮层被"稍后再议"收起的标记
+const overlayDismissed = ref(false);
+
+//: 当前要处理的那一件事
+const activeDecision = computed(() => decisions.value[0] || null);
+const showOverlay = computed(
+  () => Boolean(activeDecision.value) && !overlayDismissed.value
+);
+
+const tang = computed(() => factions.value.find((f) => f.faction_key === "tang"));
+const allegiance = computed(
+  () => relations.value.find((r) => r.from_key === "fanzhen") || null
+);
+
+//: 这盘棋的终点是广德元年（764），共 99 个月
+const HORIZON_MONTHS = 99;
+const progressPct = computed(() => {
+  const done = branch.value ? branch.value.tick_index : 0;
+  return Math.min(100, Math.round((done / HORIZON_MONTHS) * 100));
+});
+const monthsLeft = computed(() => {
+  const done = branch.value ? branch.value.tick_index : 0;
+  return Math.max(0, HORIZON_MONTHS - done);
+});
 //: 官职的显示名。数字与代码留在数据里，界面只给人读的字。
 const RANK_LABELS = { 1: "一品", 2: "二品", 3: "三品", 4: "四品", 5: "五品" };
 const KIND_LABELS = {
@@ -113,8 +139,11 @@ async function ensureBranch() {
 
 async function loadDecisions() {
   if (!branch.value) return;
+  const before = decisions.value.length;
   decisions.value = await api.decisions(branch.value.id);
   relations.value = await api.relations(branch.value.id);
+  // 有新的事找上门，就重新把浮层推到你面前
+  if (decisions.value.length !== before) overlayDismissed.value = false;
 }
 
 async function loadCourt() {
@@ -204,6 +233,8 @@ async function onResolve(decision, option) {
     message.value = `决断失败：${err.message}`;
   } finally {
     busy.value = false;
+    // 处理完一件，若有下一件，浮层应当自己再出现
+    overlayDismissed.value = false;
   }
 }
 
@@ -271,8 +302,8 @@ onMounted(boot);
     <AiPanel :branch-id="branch ? branch.id : null" :events="events" />
   </main>
 
-  <main v-else class="layout">
-    <section class="map-panel">
+  <main v-else class="stage">
+    <section class="map-layer">
       <div class="map-toolbar">
         <div class="scale-group">
           <label for="scope">观察尺度</label>
@@ -308,7 +339,22 @@ onMounted(boot);
       />
     </section>
 
-    <aside class="side-panel">
+    <!-- 顶部 HUD：只留最要紧的几项，其余收进侧栏 -->
+    <header class="hud">
+      <div class="hud-main">
+        <span class="hud-date">{{ branch ? branch.current_date : "" }}</span>
+        <span class="hud-role">{{ scenario ? scenario.role : "" }}</span>
+      </div>
+      <div class="hud-stats">
+        <span v-if="tang">府库 <b>{{ Math.round(tang.treasury).toLocaleString() }}</b></span>
+        <span v-if="allegiance">
+          河北 <b>{{ allegiance.value.toFixed(2) }}</b> {{ allegiance.label }}
+        </span>
+        <span v-if="ending">结局 <b>{{ ending.grade }}</b></span>
+      </div>
+    </header>
+
+    <aside class="side-panel" :class="{ open: drawerOpen }">
       <div v-if="ending" class="panel-block">
         <h2>五年之后</h2>
         <EndingCard :ending="ending" />
@@ -345,29 +391,6 @@ onMounted(boot);
         </details>
       </div>
 
-      <div class="panel-block">
-        <h2>推进时间</h2>
-        <div class="advance-row">
-          <button class="advance" :disabled="busy" @click="advance(1)">推进 1 月</button>
-          <button class="advance" :disabled="busy" @click="advance(3)">推进 3 月</button>
-          <button class="advance" :disabled="busy" @click="advance(12)">推进 12 月</button>
-        </div>
-        <p class="hint">{{ message }}</p>
-        <p v-if="error" class="hint error">{{ error }}</p>
-        <details class="precision-more">
-          <summary>模拟精度：{{ PRECISIONS.find((p) => p.key === precision)?.name }}</summary>
-          <div class="precision-grid">
-            <button
-              v-for="p in PRECISIONS"
-              :key="p.key"
-              :class="{ active: precision === p.key }"
-              @click="setPrecision(p.key)"
-            >
-              <b>{{ p.name }}</b><span>{{ p.desc }}</span>
-            </button>
-          </div>
-        </details>
-      </div>
 
       <div class="tab-strip">
         <button
@@ -506,5 +529,45 @@ onMounted(boot);
         />
       </div>
     </aside>
+
+    <!-- 底部动作条：推进与进度，任何时刻都看得见 -->
+    <footer class="action-bar">
+      <div class="progress">
+        <div class="progress-track"><i :style="{ width: progressPct + '%' }"></i></div>
+        <span class="progress-label">
+          距广德元年还有 {{ monthsLeft }} 月
+        </span>
+      </div>
+      <div class="advance-group">
+        <button class="advance" :disabled="busy" @click="advance(1)">1 月</button>
+        <button class="advance" :disabled="busy" @click="advance(3)">3 月</button>
+        <button class="advance primary" :disabled="busy" @click="advance(12)">1 年</button>
+        <button class="drawer-toggle" @click="drawerOpen = !drawerOpen">
+          {{ drawerOpen ? "收起" : "朝局" }}
+          <span v-if="decisions.length" class="count urgent">{{ decisions.length }}</span>
+        </button>
+      </div>
+      <p class="action-hint">{{ message }}</p>
+      <p v-if="error" class="action-hint error">{{ error }}</p>
+    </footer>
+
+    <!-- 决策：整屏只剩这一件事 -->
+    <div v-if="showOverlay" class="decision-overlay">
+      <div class="decision-sheet">
+        <div class="sheet-head">
+          <span>奏</span>
+          <em>决断之后本月即结算</em>
+        </div>
+        <DecisionPanel
+          :decisions="[activeDecision]"
+          :relations="relations"
+          :busy="busy"
+          @resolve="onResolve"
+        />
+        <button class="link-btn sheet-later" @click="overlayDismissed = true">
+          稍后再议
+        </button>
+      </div>
+    </div>
   </main>
 </template>
