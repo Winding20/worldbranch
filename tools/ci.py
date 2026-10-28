@@ -167,7 +167,7 @@ def main() -> int:
     finally:
         stop(server)
 
-    # ---------- 7. 生产入口 ----------
+    # ---------- 7. 生产入口（一键启动用的就是它） ----------
     # 部署用的是 serve.py（waitress），这里把同一条路径也跑一遍，
     # 免得"开发能跑、上生产就崩"。
     say("生产入口 serve.py")
@@ -191,12 +191,12 @@ def main() -> int:
             return fail("serve.py 未就绪")
         print("    serve.py 已就绪", flush=True)
 
-        say("部署自检 deploy_check")
+        say("接口自检 check_api")
         code = run(
-            [sys.executable, "tools/deploy_check.py", prod_url], ROOT, env
+            [sys.executable, "tools/check_api.py", prod_url], ROOT, env
         )
         if code != 0:
-            return fail("部署自检")
+            return fail("接口自检")
     finally:
         stop(prod)
 

@@ -72,9 +72,9 @@
 │  │  ├─ engine/
 │  │  │  ├─ rules.py         纯函数规则层（可单测，不碰数据库）
 │  │  │  └─ simulation.py    时间推进、调运传导、事件生成、快照
-│  │  ├─ seed/tang_750.py    唐朝天宝九年内置世界（7 道、2 势力、8 条粮道）
+│  │  ├─ seed/tang_755.py    安史之乱切片（8 地区、21 史实、7 岔路口）
 │  │  └─ cli.py              init-db / seed / new-branch / advance / show
-│  ├─ tests/                 47 个测试（规则、引擎、传导、干预、API）
+│  ├─ tests/                 178 个测试（规则、引擎、史实、决策、军事、忠诚、API、AI）
 │  └─ run.py                 开发入口
 ├─ frontend/                 Vue 3 + Vite 前端（新界面）
 │  ├─ src/components/        MapView / EventFeed / RegionDetail /
@@ -197,20 +197,23 @@ python tools\data_provenance.py # 每个数字从哪来
 
 ### 数据库
 
-开发期连接的是**腾讯云服务器上的 MySQL**（5.7.44 / utf8mb4），连接串写在
-`backend/.env`（已 gitignore，不会进仓库）。换库只改这一行：
+**默认用 Python 自带的 SQLite**，数据就是一个文件：
+`backend/instance/worldbranch.db`。不需要安装数据库、不需要配置。
+
+SQLite 下开了 WAL、`busy_timeout=5s`、`foreign_keys`，
+多线程起服务（`serve.py` 默认 8 线程）不会出现 `database is locked`。
+
+想把数据放到别处或换成 MySQL 时才需要配置：
 
 ```
+# 换路径（sqlite:/// 后面是相对 backend/ 的路径）
+WORLDBRANCH_DATABASE_URL=sqlite:///instance/worldbranch.db
+
+# 换 MySQL（先 pip install -r requirements-mysql.txt）
 WORLDBRANCH_DATABASE_URL=mysql+pymysql://用户:密码@主机:3306/库名?charset=utf8mb4
 ```
 
-不配置时回退到本地 SQLite（`backend/instance/worldbranch.db`），测试用的就是它。
-
-连接出问题先跑诊断脚本，它会把失败分成"网络 / 认证 / 库不存在 / 字符集"几类：
-
-```powershell
-python tools\test_db.py
-```
+写进 `backend/.env`（已 gitignore）或直接设环境变量都行，代码无需改动。
 
 ### 性能
 
@@ -401,7 +404,7 @@ python tools\ci.py --skip-frontend   # 只跑后端
 python tools\ci.py --port 5300       # 换端口（默认 5300，不占用开发用的 5210）
 ```
 
-CI 用**独立的 SQLite 文件**（`.tmp/ci.db`），不会碰开发库或远程 MySQL；
+CI 用**独立的 SQLite 文件**（`.tmp/ci.db`），不会碰你本地的数据库；
 起一个临时服务跑完冒烟后会自己关掉。
 
 同样这套检查会在推送时由 GitHub Actions 执行（`.github/workflows/ci.yml`）。

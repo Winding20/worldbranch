@@ -1,15 +1,15 @@
-﻿"""打包可部署的发布产物，并可选地在干净目录里验证它能跑起来。
+﻿"""打包可分发的发布产物，并验证解压后能一键启动。
 
     python tools/package.py              # 只打包
-    python tools/package.py --verify     # 打包 + 解到 .tmp/pkgcheck 实跑一遍
+    python tools/package.py --verify     # 解到干净目录，按步骤实跑一遍
+    python tools/package.py --oneclick   # 解到干净目录，用包里的 start 脚本启动
 
 产物：dist-package/worldbranch-<日期>.tar.gz
-包含：backend（源码与前端产物挂载点）、frontend/dist、deploy、requirements，
+包含：backend、frontend/dist、tools、deploy、start.bat / start.sh，
       不含 instance、.env、__pycache__、测试缓存。
 
-验证做的事：
-  解包 → 建独立 SQLite → init-db + seed → serve.py 起服务 → deploy_check → 收工
-这一步能证明"打出来的包是自包含的"，但**不能**代替真正部署到服务器。
+--oneclick 走的是使用者真实路径：
+  解包 → 执行包内 tools/bootstrap.py → 建库播种 → 起服务 → 接口自检
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ def build() -> Path:
         "4. 起服务：\n"
         "   cd backend && HOST=127.0.0.1 PORT=5210 python serve.py\n\n"
         "5. 自检：\n"
-        "   python tools/deploy_check.py http://127.0.0.1:5210\n\n"
+        "   python tools/check_api.py http://127.0.0.1:5210\n\n"
         "详细说明见 deploy/ 与 docs/部署说明.md。\n",
         encoding="utf-8",
     )
@@ -180,7 +180,7 @@ def verify(tar_path: Path, port: int = 5320) -> int:
             return 1
         print("    服务已就绪，跑部署自检")
         code = subprocess.run(
-            [py, str(ROOT / "tools" / "deploy_check.py"), url],
+            [py, str(ROOT / "tools" / "check_api.py"), url],
             cwd=ROOT,
             env=env,
         ).returncode
@@ -246,7 +246,7 @@ def verify_oneclick(tar_path: Path, port: int = 5330) -> int:
             return 1
         print("    一键脚本已把服务带起来，跑部署自检")
         code = subprocess.run(
-            [py, str(ROOT / "tools" / "deploy_check.py"), url], cwd=ROOT, env=env
+            [py, str(ROOT / "tools" / "check_api.py"), url], cwd=ROOT, env=env
         ).returncode
         if code != 0:
             print("✗ 部署自检未通过")

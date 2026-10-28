@@ -1,7 +1,7 @@
-"""部署后自检：对着一个线上地址逐项确认。
+﻿"""接口自检：对着一个运行中的地址逐项确认。
 
-    python tools/deploy_check.py https://your-domain
-    python tools/deploy_check.py http://127.0.0.1:5210
+    python tools/check_api.py http://127.0.0.1:5210
+    python tools/check_api.py http://127.0.0.1:5210
 
 只做只读检查，不改数据。任何一项失败以非 0 退出。
 """
