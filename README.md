@@ -1,4 +1,4 @@
-﻿# WorldBranch · 安史之乱模拟器
+# WorldBranch · 安史之乱模拟器
 
 给定真实的历史起点，你替唐廷做决定，看历史怎么分叉。
 
@@ -8,6 +8,12 @@
 >
 > 完整设计见 [项目总设计文档](docs/WorldBranch_项目总设计文档.md)，
 > 数据来源逐项说明见 `python tools/data_provenance.py`。
+>
+> **想把背景换成别的历史？** 引擎那部分已抽成独立仓库
+> [worldbranch-core](https://github.com/Winding20/worldbranch-core)：
+> 一个世界包 = 四个 JSON 文件，按
+> [AI 制作指南](https://github.com/Winding20/worldbranch-core/blob/main/docs/AI制作指南.md)
+> 做即可，不需要改代码。本仓库是它的第一个成品世界。
 
 ---
 
