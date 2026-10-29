@@ -1,4 +1,4 @@
-﻿# --- Python ---
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.so
@@ -58,3 +58,5 @@ dist-promo/
 .dsh/
 # 上传用的打包产物
 dist-upload/
+# 独立的框架仓库（有自己的 .git，单独推送）
+worldbranch-core/
